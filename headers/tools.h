@@ -1,6 +1,8 @@
 #ifndef TOOLS_H_
 #define TOOLS_H_
 
+//#define STB_IMAGE_IMPLEMENTATION
+
 //constants
 #include "const.h"
 
@@ -12,6 +14,7 @@
 
 //library headers
 #include "../cjson/cJSON.h"
+#include "stb_image.h"
 
 //file headers
 #include "controls.h"

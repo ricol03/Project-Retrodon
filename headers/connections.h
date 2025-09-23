@@ -13,17 +13,33 @@ struct Memory {
 } typedef Memory;
 
 struct Post {
-    char created_at[MAX_STR];
+    char createdAt[MAX_STR];
     char content[MAX_STR];
     char username[MAX_STR];
 } typedef Post;
 
+struct Account {
+    char username[MAX_STR];
+    char displayName[MAX_STR];
+    char createdAt[MAX_STR];
+    char note[MAX_STR];
+    //char avatar[];
+    //char header[];
+    int followingNumber;
+    int followersNumber;
+} typedef Account;
+
+
+
 static size_t WriteCallback(void * contents, size_t size, size_t nmemb, void * userp);
 
-void createEndpoint(char * server, char * endpoint);
-void resetMemory(Memory * data, Post posts[]);
+void createEndpoint(char * server, char * endpoint, char * argument);
+void resetMemory(Memory * data);
+void resetPosts(Post posts[]);
 
-int accessPublicContent(char * server);
+int accessPublicTimeline(char * server);
+int accessPublicAccount(char * server, char * id);
+
 int createApplication(char * server);
 int getAccessToken(char * server);
 int verifyCredentials(char * server);

@@ -26,6 +26,7 @@ int homeWindow(HWND hwnd) {
         NULL
     );*/
 
+    //TODO: add icon instead of text
     hrefresh = CreateWindow(
         WC_BUTTON,
         TEXT("R"),
@@ -86,7 +87,6 @@ int homeWindow(HWND hwnd) {
         NULL
     );
 
-    // Add one dummy column (required in report mode)
     LVCOLUMN col = {0};
     col.mask = LVCF_WIDTH | LVCF_TEXT;
     col.cx = 100;
@@ -101,8 +101,6 @@ int homeWindow(HWND hwnd) {
     col.pszText = "Posted at";
     ListView_InsertColumn(hlist, 2, &col);
 
-    // Set row height (via custom font or imagelist trick)
-    // For now, we'll make space for text/avatars
     ListView_SetIconSpacing(hlist, 100, 60);
 
     hstatus = CreateWindowEx(
@@ -138,22 +136,30 @@ int homeWindow(HWND hwnd) {
 
     HMENU hmenu = CreateMenu();
     HMENU hsubmenufile        = CreatePopupMenu();
+    HMENU hsubmenutimefile    = CreatePopupMenu();
     HMENU hsubmenusearch      = CreatePopupMenu();
     HMENU hsubmenusettings    = CreatePopupMenu();
     HMENU hsubmenuabout       = CreatePopupMenu();
 
-    AppendMenu(hsubmenufile, MF_STRING, IDM_FILE_HOME, "Home");
-    AppendMenu(hsubmenufile, MF_SEPARATOR, 0, NULL);
     AppendMenu(hsubmenufile, MF_STRING, IDM_FILE_CLOSE, "Exit");
-    AppendMenu(hsubmenusearch, MF_STRING, IDM_SEARCH_SEARCHBOX, "Search box...");
-    AppendMenu(hsubmenusettings, MF_STRING, IDM_SETTINGS_SETTINGS, "Settings");
-    AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_HELP, "Test");
+    
+    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 100, "Main page");
+    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 101, "Local");
+    AppendMenu(hsubmenutimefile, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hsubmenutimefile, MF_STRING | MF_CHECKED, 102, "Federation");
+    
+    AppendMenu(hsubmenusearch, MF_STRING | MF_GRAYED, IDM_SEARCH_SEARCHBOX, "Test");
+    AppendMenu(hsubmenusettings, MF_STRING, IDM_SETTINGS_SETTINGS, "Preferences...");
+
+    AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_HELP, "Help");
     AppendMenu(hsubmenuabout, MF_SEPARATOR, 0, NULL);
     AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_ABOUT, "About");
+
     AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenufile, "File");
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusearch, "Search");
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusettings, "Settings");
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenuabout, "About");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenutimefile, "Timeline");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusearch, "View");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusettings, "Options");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenuabout, "Help");
 
     SetMenu(hwnd, hmenu);
 }

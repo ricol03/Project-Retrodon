@@ -19,6 +19,7 @@ char finallink[128];
 extern char authorizationCode[128];
 
 Post posts[MAX_POSTS];
+Account account;
 
 extern PAINTSTRUCT ps;
 
@@ -38,25 +39,31 @@ static size_t WriteCallback(void * contents, size_t size, size_t nmemb, void * u
     return totalSize;
 }
 
-
-void resetMemory(Memory * data, Post posts[]) {
+void resetMemory(Memory * data) {
     memset(data, 0, sizeof(*data));
+}
+
+void resetPosts(Post posts[]) {
     memset(posts, 0, sizeof(posts));
 }
 
-void createEndpoint(char * server, char * endpoint) {
-    snprintf(finallink, sizeof(finallink), "https://%s%s", server, endpoint);
+void createEndpoint(char * server, char * endpoint, char * argument) {
+    snprintf(finallink, sizeof(finallink), "https://%s%s%s", server, endpoint, argument);
     MessageBox(NULL, finallink, "Info", MB_ICONINFORMATION);
 }
 
-int accessPublicContent(char * server) {
+/* public connections */
+
+int accessPublicTimeline(char * server) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        resetMemory(&data, posts);
-        createEndpoint(server, "/api/v1/timelines/public?limit=64");
+        resetMemory(&data);
+        resetPosts(posts);
+
+        createEndpoint(server, "/api/v1/timelines/public", "?limit=64");
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 
@@ -99,9 +106,9 @@ int accessPublicContent(char * server) {
                     cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
 
                     if (created && cJSON_IsString(created))
-                        strncpy(posts[i].created_at, created->valuestring, MAX_STR - 1);
+                        strncpy(posts[i].createdAt, created->valuestring, MAX_STR - 1);
                     else
-                        posts[i].created_at[0] = '\0';
+                        posts[i].createdAt[0] = '\0';
 
                     if (content && cJSON_IsString(content))
                         strncpy(posts[i].content, content->valuestring, MAX_STR - 1);
@@ -113,7 +120,7 @@ int accessPublicContent(char * server) {
                     else
                         posts[i].username[0] = '\0';
 
-                    posts[i].created_at[MAX_STR - 1] = '\0';
+                    posts[i].createdAt[MAX_STR - 1] = '\0';
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
 
@@ -131,6 +138,78 @@ int accessPublicContent(char * server) {
     
     return 0;
 }
+
+int accessPublicAccount(char * server, char * id) {
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    CURL * curl = curl_easy_init();
+
+    if (curl) {
+        resetMemory(&chunk2);
+        createEndpoint(server, "/api/v1/accounts/", id);
+        curl_easy_setopt(curl, CURLOPT_URL, finallink);
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk2);
+
+        CURLcode result = curl_easy_perform(curl);
+
+        if (result != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+            MessageBox(NULL, "Instance's info could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+        } else {
+            //MessageBox(NULL, client_id->valuestring, "Info", MB_ICONINFORMATION | MB_OK);
+
+            printf("\n\n(TOKEN) Server response:\n%s\n", chunk2.response);
+
+            cJSON *json = cJSON_Parse(chunk2.response);
+            if (json) {
+
+                cJSON * username  = cJSON_GetObjectItemCaseSensitive(json, "username");
+                cJSON * display_name  = cJSON_GetObjectItemCaseSensitive(json, "display_name");
+
+                cJSON * created_at  = cJSON_GetObjectItemCaseSensitive(json, "created_at");
+                cJSON * note = cJSON_GetObjectItemCaseSensitive(json, "note");
+
+                cJSON * following = cJSON_GetObjectItemCaseSensitive(json, "following_count");
+                cJSON * followers = cJSON_GetObjectItemCaseSensitive(json, "followers_count");
+
+                strncpy(account.username, username->valuestring, MAX_STR - 1);
+                strncpy(account.displayName, display_name->valuestring, MAX_STR - 1);
+                strncpy(account.createdAt, created_at->valuestring, MAX_STR - 1);
+                strncpy(account.note, note->valuestring, MAX_STR - 1);
+                account.followingNumber = following->valueint;
+                account.followersNumber = followers->valueint;
+
+                /*cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
+                if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
+                    MessageBox(NULL, "Deu token", "Aviso", MB_ICONEXCLAMATION);
+                    printf("Access token: %s\n", access_token->valuestring);
+                    strcpy(token, access_token->valuestring);
+                } else {
+                    printf("No access_token in JSON\n");
+                }*/
+                cJSON_Delete(json);
+            }
+
+
+        }            
+        
+        curl_easy_cleanup(curl);
+    }
+
+    curl_global_cleanup();
+
+    return 0;
+}
+
+/*int loginProcedure() {
+    createApplication(char * server)
+    getAccessToken(char * server)
+    verifyCredentials(char * server)
+}*/
 
 int createApplication(char * server) {
     /*curl_global_init(CURL_GLOBAL_ALL);
@@ -204,7 +283,7 @@ int getAccessToken(char * server) {
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, "/oauth/token");
+        createEndpoint(server, "/oauth/token", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -269,7 +348,7 @@ int verifyCredentials(char * server) {
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, "/api/v1/apps/verify_credentials");
+        createEndpoint(server, "/api/v1/apps/verify_credentials", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -326,6 +405,9 @@ int authorizeUser(char * server, HINSTANCE hinstance) {
     return -1;
 
 }
+
+/* login */
+
 
 /*int getUserToken(char * server) {
     curl_global_init(CURL_GLOBAL_ALL);

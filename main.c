@@ -20,6 +20,8 @@ char authorizationCode[128] = {0};
 DWORD wversion, wmajorversion, wminorversion, wbuild;
 
 extern Post posts[64];
+extern Account account;
+
 
 
 //TODO: could do a separate file for dialogs
@@ -30,6 +32,10 @@ int showInstanceDialog(HINSTANCE hinstance) {
 int showCodeDialog(HINSTANCE hinstance) {
     return DialogBox(hinstance, MAKEINTRESOURCE(IDD_DIALOG_CODE), NULL, CodeDialogProc);
 }
+int showAccountDialog(HINSTANCE hinstance) {
+    return DialogBox(hinstance, MAKEINTRESOURCE(IDD_DIALOG_ACCOUNT), NULL, CodeDialogProc);
+}
+
 
 int preparingApplication() {
     INITCOMMONCONTROLSEX icex;
@@ -45,6 +51,41 @@ int preparingApplication() {
         } else
             MessageBox(NULL, "Instance could not be saved", "Error", MB_ICONERROR);
     }
+
+    /* ------ test ------ */
+
+    accessPublicAccount(serverAddress, "113571402987465211");
+    
+    /*imgdata = stbi_load(newimagepath, &x, &y, &c, 4);
+
+    if (imgdata) {
+        MessageBox(NULL, L"Funcionou", L"Info", MB_ICONINFORMATION);
+    } else {
+        MessageBox(NULL, L"Não funcionou", L"Error", MB_ICONERROR);
+        printf("%s", stbi_failure_reason());
+    }*/
+
+
+    HWND hdlg = CreateDialog(glhinstance, MAKEINTRESOURCE(IDD_DIALOG_ACCOUNT), NULL, AccountDialogProc);
+    HWND hname = GetDlgItem(hdlg, IDS_NAME_A);
+    HWND hfollowing = GetDlgItem(hdlg, IDS_FOLLOWING_A);
+    HWND hfollowers = GetDlgItem(hdlg, IDS_FOLLOWERS_A);
+    HWND hnote = GetDlgItem(hdlg, IDS_NOTE_A);
+
+    char following[32];
+    snprintf(following, sizeof(following), "Following: %d", account.followingNumber);
+
+    char followers[32];
+    snprintf(followers, sizeof(followers), "Followers: %d", account.followersNumber);
+
+    SendMessage(hname, WM_SETTEXT, 0, (LPARAM)account.displayName);
+    SendMessage(hfollowing, WM_SETTEXT, 0, (LPARAM)following);
+    SendMessage(hfollowers, WM_SETTEXT, 0, (LPARAM)followers);
+    SendMessage(hnote, WM_SETTEXT, 0, (LPARAM)account.note);
+
+    ShowWindow(hdlg, SW_SHOW);
+    
+    /*--------------------*/
 
     createDirectory();
     checkVersion();
@@ -102,7 +143,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
     switch (message) {
         case WM_CREATE: {
             homeWindow(hwnd);
-            accessPublicContent(serverAddress);
+            accessPublicTimeline(serverAddress);
 
             for (int i = 0; i < MAX_POSTS; i++) {
                 LVITEM item = {0};
@@ -131,7 +172,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                     else if (col == 1)
                         plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].content;
                     else
-                        plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].created_at;
+                        plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].createdAt;
                 }
             }
         }
@@ -158,7 +199,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                 case IDB_REFRESH: {
                     //TODO: this behaviour should change whether the user is logged in or not
-                    accessPublicContent(serverAddress);
+                    accessPublicTimeline(serverAddress);
 
                     for (int i = 0; i < MAX_POSTS; i++) {
                         LVITEM item = {0};
@@ -262,6 +303,34 @@ INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM l
         case WM_CLOSE:
         case WM_DESTROY: 
             EndDialog(hdlg, IDB_CANCEL_C); 
+            return TRUE;
+    }
+
+    return TRUE;
+}
+
+INT_PTR CALLBACK AccountDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam) {
+    switch(message) {
+        case WM_COMMAND:
+            switch(wparam) {
+                case IDB_OK_A: {
+                    EndDialog(hdlg, IDB_OK_A);
+                    return TRUE;
+                }    
+            }
+            break;
+
+        case WM_PAINT: {
+            HDC hdc = BeginPaint(hdlg, &ps);
+            FillRect(hdc, &ps.rcPaint, (HBRUSH) ((GetSysColor(COLOR_WINDOW)+1)));
+            EndPaint(hdlg, &ps);
+        
+            return 0;
+        }
+
+        case WM_CLOSE:
+        case WM_DESTROY: 
+            EndDialog(hdlg, IDB_OK_A); 
             return TRUE;
     }
 
