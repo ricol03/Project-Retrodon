@@ -11,6 +11,8 @@ HWND hstatus;
 
 PAINTSTRUCT ps;
 
+HINSTANCE glhinstance;
+
 char serverAddress[128] = {0};
 char authorizationCode[128] = {0};
 
@@ -22,31 +24,36 @@ extern Post posts[64];
 int showInstanceDialog(HINSTANCE hinstance) {
     return DialogBox(hinstance, MAKEINTRESOURCE(IDD_DIALOG_INSTANCE), hwndmain, InstanceDialogProc);
 }
-
 int showCodeDialog(HINSTANCE hinstance) {
     return DialogBox(hinstance, MAKEINTRESOURCE(IDD_DIALOG_CODE), NULL, CodeDialogProc);
 }
 
-
-int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PSTR lpcmdline, int nshowcmd) {
+int preparingApplication() {
     INITCOMMONCONTROLSEX icex;
     icex.dwSize = sizeof(icex);
     icex.dwICC = ICC_LISTVIEW_CLASSES;
     InitCommonControlsEx(&icex);
 
-    int result = showInstanceDialog(hinstance);
+    if (!readSettings()) {
+        int result = showInstanceDialog(glhinstance);
 
-    if (result == IDB_CONTINUE_I) {
-        MessageBox(NULL, serverAddress, "Info", MB_ICONEXCLAMATION);
-    } else
-        MessageBox(NULL, "erro", "erro", MB_ICONERROR);
+        if (result == IDB_CONTINUE_I) {
+            saveSettings();
+        } else
+            MessageBox(NULL, "Instance could not be saved", "Error", MB_ICONERROR);
+    }
+}
+
+int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PSTR lpcmdline, int nshowcmd) {
+
+    preparingApplication();
 
     #pragma region MainWindow
     WNDCLASS mainwindowclass = { 0 };
 
     mainwindowclass.style            = CS_OWNDC;
     mainwindowclass.lpfnWndProc      = MainWindowProc;
-    mainwindowclass.hInstance        = hinstance;
+    mainwindowclass.hInstance        = glhinstance;
     mainwindowclass.lpszClassName    = (LPCSTR)MAIN_CLASS;
 
     RegisterClass(&mainwindowclass);
@@ -59,7 +66,7 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PSTR lpcmdline,
         CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
         NULL,
         NULL,
-        hinstance,
+        glhinstance,
         NULL
     );
     
@@ -126,7 +133,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
         case WM_COMMAND: {
             switch (LOWORD(wparam)) {
                 case IDB_LOGIN: {
-                    //accessPublicContent();
                     if (!createApplication(serverAddress)) {
                         if (!getAccessToken(serverAddress)) {
                             if (!verifyCredentials(serverAddress)) {
@@ -154,7 +160,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
             MoveWindow(hsearch, 25, 25, width - BUTTON_WIDTH - 75, BUTTON_HEIGHT, TRUE);
             MoveWindow(hlist, 0, 75, width, height - 100, TRUE);
 
-            SendMessage(hstatus, WM_SIZE, 0, 0); // auto-resize status bar
+            SendMessage(hstatus, WM_SIZE, 0, 0);
         }
         
         case WM_PAINT: {

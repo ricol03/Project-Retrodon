@@ -56,53 +56,41 @@ int accessPublicContent(char * server) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
 
+        //TODO: do a while, while the curl perform failed and the user clicked retry
+        /*while ()
+        {}*/
+        
         CURLcode result = curl_easy_perform(curl);
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, "Instance's info could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+            MessageBox(NULL, "Public content could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
-            MessageBox(NULL, "Instance's info was retrieved", "Info", MB_ICONINFORMATION | MB_OK);
+            //MessageBox(NULL, "Instance's info was retrieved", "Info", MB_ICONINFORMATION | MB_OK);
 
             cJSON * root = cJSON_Parse(data.response);
 
             if (root == NULL) {
                 MessageBox(NULL, "JSON is empty", "Error", MB_ICONERROR);
             } else {
-                printf("veio cá");
-
                 if (!cJSON_IsArray(root)) {
                     printf("Error: expected array of posts\n");
                     return -1;
                 }
 
-                /*cJSON * item = NULL;
-                
-                int i = 0;    
-                cJSON_ArrayForEach(item, root) {
-                    if (i >= MAX_POSTS) break;
-                    printf("%d", i);
-
-                    posts[i].created_at = cJSON_GetObjectItemCaseSensitive(item, "created_at")->valuestring;
-                    posts[i].content = cJSON_GetObjectItemCaseSensitive(item, "content")->valuestring;
-                    posts[i].username = cJSON_GetObjectItemCaseSensitive(item, "username")->valuestring;
-
-                    i++;
-                }*/
-
                 cJSON *item = NULL;
                 size_t i = 0;
 
                 cJSON_ArrayForEach(item, root) {
-                    if (i >= MAX_POSTS) break;
+                    if (i >= MAX_POSTS) 
+                        break;
 
-                    cJSON *created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
-                    cJSON *content  = cJSON_GetObjectItemCaseSensitive(item, "content");
+                    cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
+                    cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
 
-                    cJSON *account  = cJSON_GetObjectItemCaseSensitive(item, "account");
-                    cJSON *username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
+                    cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
+                    cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
 
-                    // Copy safely (truncate if too long)
                     if (created && cJSON_IsString(created))
                         strncpy(posts[i].created_at, created->valuestring, MAX_STR - 1);
                     else
@@ -118,34 +106,12 @@ int accessPublicContent(char * server) {
                     else
                         posts[i].username[0] = '\0';
 
-                    // Always null-terminate
                     posts[i].created_at[MAX_STR - 1] = '\0';
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
 
-                    printf("[%zu] %s (%s): %s\n",
-                        i,
-                        posts[i].username[0] ? posts[i].username : "(no user)",
-                        posts[i].created_at[0] ? posts[i].created_at : "(no date)",
-                        posts[i].content[0] ? posts[i].content : "(no content)");
-
                     i++;
                 }
-
-                
-
-                printf("%s", posts[0].content);
-
-                MessageBox(NULL, posts[0].created_at, "Information", MB_OK);
-                
-
-                /*cJSON * id = cJSON_GetObjectItemCaseSensitive(json, "client_id");
-                cJSON * secret = cJSON_GetObjectItemCaseSensitive(json, "client_secret");*/
-
-                //client_id = id->valuestring;size_t
-                //client_secret = secret->valuestring;
-
-                //MessageBox(NULL, client_secret, client_id, MB_ICONINFORMATION);
 
                 cJSON_Delete(root);
             }
@@ -266,9 +232,7 @@ int getAccessToken(char * server) {
             curl_global_cleanup();
             return -1;
         } else {
-            //MessageBox(NULL, client_id->valuestring, "Info", MB_ICONINFORMATION | MB_OK);
-
-            printf("\n\n(TOKEN) Server response:\n%s\n", chunk2.response);
+            //printf("\n\n(TOKEN) Server response:\n%s\n", chunk2.response);
 
             cJSON *json = cJSON_Parse(chunk2.response);
             if (json) {
@@ -282,31 +246,6 @@ int getAccessToken(char * server) {
                 }
                 cJSON_Delete(json);
             }
-
-            /*printf("Server response:\n%s\n", chunk2.response);
-
-
-            cJSON * json = cJSON_Parse(chunk2.response);
-
-            if (json == NULL) {
-                MessageBox(NULL, "JSON is empty", "Error", MB_ICONERROR);
-            } else {
-                cJSON * access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
-                cJSON * token_type = cJSON_GetObjectItemCaseSensitive(json, 
-                    "token_type");
-
-                MessageBox(NULL, "a", "b", MB_ICONEXCLAMATION);
-
-                if (access_token->valuestring == NULL)
-                    printf("n dá");
-                else
-                    token = access_token->valuestring;
-
-                MessageBox(NULL, token, token_type->valuestring, MB_ICONEXCLAMATION);
-
-
-                cJSON_Delete(json);
-            }*/
         }            
         
         curl_easy_cleanup(curl);
@@ -381,7 +320,7 @@ int authorizeUser(char * server, HINSTANCE hinstance) {
 
 }
 
-/*int getAccessToken(char * server) {
+/*int getUserToken(char * server) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();

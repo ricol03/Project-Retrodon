@@ -21,44 +21,7 @@
 
 
 
-#define IDW_MAIN_LABEL_TITLE                100
-#define IDW_MAIN_LABEL_UNAVAILABLETRENDING  101
 
-#define IDW_PROVIDER_LABEL_WARNING          120
-
-
-#define IDW_MAIN_BUTTON_SEARCH              200
-#define IDW_SEARCH_BUTTON_WATCH             201
-#define IDW_SEARCH_BUTTON_SEARCH            202
-#define IDW_SEARCH_BUTTON_CANCEL            203
-#define IDW_SEARCH_BUTTON_SELECT            204
-#define IDW_SETTINGS_BUTTON_APPLY           205
-
-#define IDW_SETTINGS_BUTTON_OK              210
-#define IDW_SETTINGS_BUTTON_CANCEL          211
-
-#define IDW_INFO_BUTTON_WATCH               220
-#define IDW_INFO_BUTTON_RETURN              221
-
-#define IDW_EPISODE_BUTTON_WATCH            230
-
-#define IDW_SEARCH_LISTBOX_SHOW             303
-#define IDW_SEARCH_LISTBOX_EPISODELIST      304
-
-#define IDW_SEARCH_EDIT_SEARCH              402
-#define IDW_NETWORK_EDIT_PORT               444
-
-#define IDW_NETWORK_CHECKBOX_PORT           500
-
-#define IDW_NETWORK_RADIO_HTTP              600
-#define IDW_NETWORK_RADIO_HTTPS             601
-
-
-
-#define IDW_SETTINGS_COMBOBOX_PROVIDERLIST  700
-#define IDW_SETTINGS_COMBOBOX_LANGLIST      701
-
-#define IDW_VIDEO_SYS_TOGGLE                800
 
 #define IDB_LOGIN                           900
 #define IDC_LISTVIEW                        901
@@ -78,8 +41,13 @@
 #define IDE_INSTANCE_I                       5000
 #define IDE_INSTANCE_C                       5001
 
+//heights & widths
 
 #define BUTTON_WIDTH                          100
 #define BUTTON_HEIGHT                          35
+
+//file names
+
+#define SETTINGSFILENAME "settings.bin"
 
 #endif

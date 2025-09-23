@@ -7,6 +7,8 @@ LRESULT CALLBACK MainWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
 INT_PTR CALLBACK InstanceDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam);
 INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam);
 
+int preparingApplication();
+
 int showCodeDialog(HINSTANCE hinstance);
 int showInstanceDialog(HINSTANCE hinstance);
 
