@@ -2,7 +2,8 @@
 
 extern char serverAddress[128];
 
-extern HWND htestbutton;
+extern HWND hrefresh;
+extern HWND hlogin;
 extern HWND hsearch;
 extern HWND hlist;
 extern HWND hstatus;
@@ -25,13 +26,24 @@ int homeWindow(HWND hwnd) {
         NULL
     );*/
 
-    htestbutton = CreateWindow(
+    hrefresh = CreateWindow(
+        WC_BUTTON,
+        TEXT("R"),
+        WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | WS_VISIBLE,
+        rcClient.left + 25, rcClient.bottom - 25, 0, 0,
+        hwnd,
+        (HMENU)IDB_REFRESH,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hlogin = CreateWindow(
         WC_BUTTON,
         TEXT("Login"),
         WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | WS_VISIBLE,
         rcClient.left + 25, rcClient.bottom - 25, 125, 35,
         hwnd,
-        (HMENU)ID_TEST,
+        (HMENU)IDB_LOGIN,
         GetModuleHandle(NULL),
         NULL
     );
@@ -56,7 +68,7 @@ int homeWindow(HWND hwnd) {
         WC_EDIT,
         "Search the Fediverse",
         WS_VISIBLE | WS_CHILD,
-        50, 25, 450, 35,
+        25, 15, 450, 35,
         hwnd,
         (HMENU) 10,
         GetModuleHandle(NULL),
@@ -77,13 +89,17 @@ int homeWindow(HWND hwnd) {
     // Add one dummy column (required in report mode)
     LVCOLUMN col = {0};
     col.mask = LVCF_WIDTH | LVCF_TEXT;
-    col.cx = 150;
+    col.cx = 100;
     col.pszText = "User";
     ListView_InsertColumn(hlist, 0, &col);
 
     col.cx = 350;
     col.pszText = "Content";
     ListView_InsertColumn(hlist, 1, &col);
+
+    col.cx = 150;
+    col.pszText = "Posted at";
+    ListView_InsertColumn(hlist, 2, &col);
 
     // Set row height (via custom font or imagelist trick)
     // For now, we'll make space for text/avatars
@@ -95,14 +111,15 @@ int homeWindow(HWND hwnd) {
         0, 0, 0, 0,
         hwnd, (HMENU)1, GetModuleHandle(NULL), NULL);
 
-    int parts[] = {200, -1};  // two "cells": first 200px, rest auto
-    SendMessage(hstatus, SB_SETPARTS, 2, (LPARAM)parts);
+    int parts[] = {30, 200, -1};
+    SendMessage(hstatus, SB_SETPARTS, 3, (LPARAM)parts);
 
     char celltext[512];
     snprintf(celltext, sizeof(celltext), "Instance: %s", serverAddress);
 
-    SendMessage(hstatus, SB_SETTEXT, 0, (LPARAM)"Logged out");   // first cell
-    SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)celltext);     // second cell
+    SendMessage(hstatus, SB_SETICON, 0, (LPARAM)LoadIcon(NULL, IDI_WARNING));
+    SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)"Logged out");   // first cell
+    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)celltext);     // second cell
 
     //SendMessage(htext, WM_SETFONT, (WPARAM)htitlefont, (LPARAM)NULL);
 

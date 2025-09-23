@@ -21,6 +21,7 @@ struct Post {
 static size_t WriteCallback(void * contents, size_t size, size_t nmemb, void * userp);
 
 void createEndpoint(char * server, char * endpoint);
+void resetMemory(Memory * data, Post posts[]);
 
 int accessPublicContent(char * server);
 int createApplication(char * server);

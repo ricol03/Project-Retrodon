@@ -4,7 +4,8 @@ const LPCSTR MAIN_CLASS       = (LPCSTR)"MainWndClass";
 
 //janelas
 HWND hwndmain;
-HWND htestbutton;
+HWND hrefresh;
+HWND hlogin;
 HWND hsearch;
 HWND hlist;
 HWND hstatus;
@@ -15,6 +16,8 @@ HINSTANCE glhinstance;
 
 char serverAddress[128] = {0};
 char authorizationCode[128] = {0};
+
+DWORD wversion, wmajorversion, wminorversion, wbuild;
 
 extern Post posts[64];
 
@@ -42,6 +45,9 @@ int preparingApplication() {
         } else
             MessageBox(NULL, "Instance could not be saved", "Error", MB_ICONERROR);
     }
+
+    createDirectory();
+    checkVersion();
 }
 
 int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PSTR lpcmdline, int nshowcmd) {
@@ -98,7 +104,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
             homeWindow(hwnd);
             accessPublicContent(serverAddress);
 
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < MAX_POSTS; i++) {
                 LVITEM item = {0};
                 item.mask = LVIF_TEXT;
                 item.iItem = i;
@@ -106,7 +112,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 ListView_InsertItem(hlist, &item);
             }
 
-            ListView_SetItemCount(hlist, 100);
+            ListView_SetItemCount(hlist, MAX_POSTS);
 
             return 0;
         }
@@ -122,9 +128,10 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                     if (col == 0)
                         plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].username;
-                    else
+                    else if (col == 1)
                         plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].content;
-
+                    else
+                        plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].created_at;
                 }
             }
         }
@@ -148,6 +155,22 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                     } else
                         MessageBox(hwndmain, "Could not create application!\nConnection attempt cannot proceed.", "Error", MB_ICONERROR);
                 }
+
+                case IDB_REFRESH: {
+                    //TODO: this behaviour should change whether the user is logged in or not
+                    accessPublicContent(serverAddress);
+
+                    for (int i = 0; i < MAX_POSTS; i++) {
+                        LVITEM item = {0};
+                        item.mask = LVIF_TEXT;
+                        item.iItem = i;
+                        item.pszText = "Example post";
+                        ListView_InsertItem(hlist, &item);
+                    }
+
+                    ListView_SetItemCount(hlist, MAX_POSTS);
+                }
+
             }
             return 0;
         }
@@ -156,9 +179,11 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
             int width = LOWORD(lparam);
             int height = HIWORD(lparam);
 
-            MoveWindow(htestbutton, width - 125, 25, BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
-            MoveWindow(hsearch, 25, 25, width - BUTTON_WIDTH - 75, BUTTON_HEIGHT, TRUE);
-            MoveWindow(hlist, 0, 75, width, height - 100, TRUE);
+            MoveWindow(hsearch, 15, 15, width - SMALL_BUTTON_WIDTH - 175, BUTTON_HEIGHT, TRUE);
+            MoveWindow(hrefresh, width - SMALL_BUTTON_WIDTH - 140, 15, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
+            MoveWindow(hlogin, width - 115, 15, BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
+
+            MoveWindow(hlist, 0, 65, width, height - 100, TRUE);
 
             SendMessage(hstatus, WM_SIZE, 0, 0);
         }
@@ -245,19 +270,23 @@ INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM l
 
 // old code from another project; might verify Windows version or not
 
-/*int checkVersion() {
+int checkVersion() {
     wversion = GetVersion();
 
     wmajorversion = (DWORD)(LOBYTE(LOWORD(wversion)));
     wminorversion = (DWORD)(HIBYTE(LOWORD(wversion)));
 
+    /*char version[64];
+    snprintf(version, sizeof(version), "Windows version: %d.%d", wmajorversion, wminorversion);
+*/
     if (wmajorversion >= 5 && wmajorversion < 11) {
+        //MessageBox(NULL, version, "Info", MB_ICONINFORMATION);
         return 0;
     } else if (wmajorversion < 5) {
-        MessageBox(NULL, L"This program only runs on Windows 2000 and later.", L"Error", MB_ICONERROR);
+        MessageBox(NULL, "This program only runs on Windows 2000 and later.", "Error", MB_ICONERROR);
         return 1;
     } else {
-        MessageBox(NULL, L"Unknown Windows version. Aborting.", L"Error", MB_ICONERROR);
+        MessageBox(NULL, "Unknown Windows version. Aborting.", "Error", MB_ICONERROR);
         return 1;
     }
-}*/
+}

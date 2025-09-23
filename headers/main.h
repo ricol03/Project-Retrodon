@@ -8,6 +8,7 @@ INT_PTR CALLBACK InstanceDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPAR
 INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam);
 
 int preparingApplication();
+int checkVersion();
 
 int showCodeDialog(HINSTANCE hinstance);
 int showInstanceDialog(HINSTANCE hinstance);

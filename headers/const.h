@@ -24,7 +24,9 @@
 
 
 #define IDB_LOGIN                           900
-#define IDC_LISTVIEW                        901
+#define IDB_REFRESH                         901
+
+#define IDC_LISTVIEW                        910
 
 
 #define ID_TEST 999
@@ -45,6 +47,8 @@
 
 #define BUTTON_WIDTH                          100
 #define BUTTON_HEIGHT                          35
+
+#define SMALL_BUTTON_WIDTH                     50
 
 //file names
 

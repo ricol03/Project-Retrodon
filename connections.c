@@ -38,6 +38,12 @@ static size_t WriteCallback(void * contents, size_t size, size_t nmemb, void * u
     return totalSize;
 }
 
+
+void resetMemory(Memory * data, Post posts[]) {
+    memset(data, 0, sizeof(*data));
+    memset(posts, 0, sizeof(posts));
+}
+
 void createEndpoint(char * server, char * endpoint) {
     snprintf(finallink, sizeof(finallink), "https://%s%s", server, endpoint);
     MessageBox(NULL, finallink, "Info", MB_ICONINFORMATION);
@@ -49,7 +55,8 @@ int accessPublicContent(char * server) {
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, "/api/v1/timelines/public");
+        resetMemory(&data, posts);
+        createEndpoint(server, "/api/v1/timelines/public?limit=64");
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 

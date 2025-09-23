@@ -14,37 +14,37 @@ wchar_t port[6];
 
 wchar_t lang[5];
 
-TCHAR appdata[128];
+char appdata[128];
 
 void createDirectory() {
-    /*if (wmajorversion == 5) {
-        HRESULT result = SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, appdata);
-        wcscat(appdata, L"\\ProjectDango\\");
+    if (wmajorversion == 5) {
+        HRESULT result = SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, appdata);
+        strcat(appdata, "\\ProjectRetrodon\\");
 
         if (checkDirectory(appdata)) {
-            BOOL check = CreateDirectory(appdata, NULL);
+            BOOL check = CreateDirectory((LPCSTR)appdata, NULL);
 
             if (check == 0) {
-                MessageBox(NULL, L"The folder could not be created", L"Error", MB_ICONERROR);
+                MessageBox(NULL, "The folder could not be created", "Error", MB_ICONERROR);
                 printf("\n\nGetLastError: %lu\n\n", GetLastError());
             }
         }
     } else {
-        HRESULT result = SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, appdata);
-        wcscat(appdata, L"\\AppData\\Local\\ProjectDango\\");
+        HRESULT result = SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, 0, appdata);
+        strcat(appdata, "\\AppData\\Local\\ProjectRetrodon\\");
 
         if (checkDirectory(appdata) == -1) {
-            BOOL check = CreateDirectory(appdata, NULL);
+            BOOL check = CreateDirectory((LPCSTR)appdata, NULL);
 
             if (check == 0) {
-                MessageBox(NULL, L"The folder could not be created", L"Error", MB_ICONERROR);
+                MessageBox(NULL, "The folder could not be created", "Error", MB_ICONERROR);
                 printf("\n\nGetLastError: %lu\n\n", GetLastError());
             }
         }
-    } */
+    }
 }
 
-int checkDirectory(TCHAR * pathname) {
+int checkDirectory(char pathname[]) {
     DWORD check = GetFileAttributes(pathname);
     return (int)check;
 }
