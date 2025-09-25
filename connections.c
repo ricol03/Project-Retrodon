@@ -15,8 +15,8 @@ char * client_id;
 char * client_secret;
 char token[512];
 
-char finallink[128];
-extern char authorizationCode[128];
+wchar_t finallink[1024];
+extern wchar_t authorizationCode[128];
 
 Post posts[MAX_POSTS];
 Account account;
@@ -47,14 +47,16 @@ void resetPosts(Post posts[]) {
     memset(posts, 0, sizeof(posts));
 }
 
-void createEndpoint(char * server, char * endpoint, char * argument) {
-    snprintf(finallink, sizeof(finallink), "https://%s%s%s", server, endpoint, argument);
-    MessageBox(NULL, finallink, "Info", MB_ICONINFORMATION);
+//FIXME: need to fix the incorrect links that are created
+void createEndpoint(wchar_t * server, wchar_t * endpoint, wchar_t * argument) {
+    swprintf(finallink, sizeof(finallink) / sizeof(wchar_t), L"https://%s%s%s", server, endpoint, argument);
+    MessageBox(NULL, finallink, L"Info", MB_ICONINFORMATION);
 }
+
 
 /* public connections */
 
-int accessPublicTimeline(char * server) {
+int accessPublicTimeline(wchar_t * server) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();
@@ -63,7 +65,7 @@ int accessPublicTimeline(char * server) {
         resetMemory(&data);
         resetPosts(posts);
 
-        createEndpoint(server, "/api/v1/timelines/public", "?limit=64");
+        createEndpoint(server, L"/api/v1/timelines/public", L"?limit=64");
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 
@@ -78,14 +80,14 @@ int accessPublicTimeline(char * server) {
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, "Public content could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+            MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
             //MessageBox(NULL, "Instance's info was retrieved", "Info", MB_ICONINFORMATION | MB_OK);
 
             cJSON * root = cJSON_Parse(data.response);
 
             if (root == NULL) {
-                MessageBox(NULL, "JSON is empty", "Error", MB_ICONERROR);
+                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
             } else {
                 if (!cJSON_IsArray(root)) {
                     printf("Error: expected array of posts\n");
@@ -106,17 +108,17 @@ int accessPublicTimeline(char * server) {
                     cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
 
                     if (created && cJSON_IsString(created))
-                        strncpy(posts[i].createdAt, created->valuestring, MAX_STR - 1);
+                        wcscpy(posts[i].createdAt, charToWchar(created->valuestring));
                     else
                         posts[i].createdAt[0] = '\0';
 
                     if (content && cJSON_IsString(content))
-                        strncpy(posts[i].content, content->valuestring, MAX_STR - 1);
+                        wcscpy(posts[i].content, charToWchar(content->valuestring));
                     else
                         posts[i].content[0] = '\0';
 
                     if (username && cJSON_IsString(username))
-                        strncpy(posts[i].username, username->valuestring, MAX_STR - 1);
+                        wcscpy(posts[i].username, charToWchar(username->valuestring));
                     else
                         posts[i].username[0] = '\0';
 
@@ -139,15 +141,15 @@ int accessPublicTimeline(char * server) {
     return 0;
 }
 
-int accessPublicAccount(char * server, char * id) {
+int accessPublicAccount(wchar_t * server, wchar_t * id) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();
 
     if (curl) {
         resetMemory(&chunk2);
-        createEndpoint(server, "/api/v1/accounts/", id);
-        curl_easy_setopt(curl, CURLOPT_URL, finallink);
+        createEndpoint(server, L"/api/v1/accounts/", id);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
@@ -158,7 +160,7 @@ int accessPublicAccount(char * server, char * id) {
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, "Instance's info could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+            MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
             //MessageBox(NULL, client_id->valuestring, "Info", MB_ICONINFORMATION | MB_OK);
 
@@ -176,12 +178,18 @@ int accessPublicAccount(char * server, char * id) {
                 cJSON * following = cJSON_GetObjectItemCaseSensitive(json, "following_count");
                 cJSON * followers = cJSON_GetObjectItemCaseSensitive(json, "followers_count");
 
-                strncpy(account.username, username->valuestring, MAX_STR - 1);
-                strncpy(account.displayName, display_name->valuestring, MAX_STR - 1);
-                strncpy(account.createdAt, created_at->valuestring, MAX_STR - 1);
-                strncpy(account.note, note->valuestring, MAX_STR - 1);
+                wcscpy(account.username, charToWchar(username->valuestring));
+                wcscpy(account.displayName, charToWchar(display_name->valuestring));
+                wcscpy(account.createdAt, charToWchar(created_at->valuestring));
                 account.followingNumber = following->valueint;
                 account.followersNumber = followers->valueint;
+
+                char * final = malloc(MAX_STR * sizeof(char));
+                removeHtml(note->valuestring, final);
+                
+
+                wcscpy(account.note, charToWchar(final));
+
 
                 /*cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
                 if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
@@ -211,13 +219,13 @@ int accessPublicAccount(char * server, char * id) {
     verifyCredentials(char * server)
 }*/
 
-int createApplication(char * server) {
+int createApplication(wchar_t * server) {
     /*curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, "/api/v1/apps");
+        createEndpoint(server, L"/api/v1/apps");
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 
@@ -277,13 +285,13 @@ int createApplication(char * server) {
     return 0;
 }   
 
-int getAccessToken(char * server) {
+int getAccessToken(wchar_t * server) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, "/oauth/token", NULL);
+        createEndpoint(server, L"/oauth/token", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -312,7 +320,7 @@ int getAccessToken(char * server) {
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, "Instance's info could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+            MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
             
             curl_easy_cleanup(curl);
             curl_global_cleanup();
@@ -324,7 +332,7 @@ int getAccessToken(char * server) {
             if (json) {
                 cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
                 if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
-                    MessageBox(NULL, "Deu token", "Aviso", MB_ICONEXCLAMATION);
+                    MessageBox(NULL, L"Deu token", L"Aviso", MB_ICONEXCLAMATION);
                     printf("Access token: %s\n", access_token->valuestring);
                     strcpy(token, access_token->valuestring);
                 } else {
@@ -342,13 +350,13 @@ int getAccessToken(char * server) {
     return 0;
 }
 
-int verifyCredentials(char * server) {
+int verifyCredentials(wchar_t * server) {
     curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, "/api/v1/apps/verify_credentials", NULL);
+        createEndpoint(server, L"/api/v1/apps/verify_credentials", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, finallink);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -370,7 +378,7 @@ int verifyCredentials(char * server) {
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, "Info could not be verified", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+            MessageBox(NULL, L"Info could not be verified", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
             return -1;
         } else {
             printf("\n\nServer response:\n%s\n", chunk3.response);
@@ -384,23 +392,23 @@ int verifyCredentials(char * server) {
     return 0;
 }
 
-int authorizeUser(char * server, HINSTANCE hinstance) {
+int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
 
-    MessageBox(NULL, server, "Info", MB_ICONASTERISK);
+    MessageBox(NULL, server, L"Info", MB_ICONASTERISK);
 
-    char auth_url[512];
-    snprintf(auth_url, sizeof(auth_url),
-        "https://%s/oauth/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=read+write+push",
+    wchar_t auth_url[512];
+    swprintf(auth_url, sizeof(auth_url),
+        L"https://%s/oauth/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=read+write+push",
         server, client_id, "urn:ietf:wg:oauth:2.0:oob");
-    ShellExecuteA(NULL, "open", auth_url, NULL, NULL, SW_SHOWNORMAL);
+    ShellExecute(NULL, L"open", auth_url, NULL, NULL, SW_SHOWNORMAL);
 
     int result = showCodeDialog(hinstance);
 
     if (result == IDB_CONTINUE_C) {
-        MessageBox(NULL, authorizationCode, "Info", MB_ICONEXCLAMATION);
+        MessageBox(NULL, authorizationCode, L"Info", MB_ICONEXCLAMATION);
         return 0;
     } else
-        MessageBox(NULL, "erro", "erro", MB_ICONERROR);
+        MessageBox(NULL, L"erro", L"erro", MB_ICONERROR);
         
     return -1;
 

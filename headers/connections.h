@@ -13,16 +13,16 @@ struct Memory {
 } typedef Memory;
 
 struct Post {
-    char createdAt[MAX_STR];
-    char content[MAX_STR];
-    char username[MAX_STR];
+    wchar_t createdAt[MAX_STR];
+    wchar_t content[MAX_STR];
+    wchar_t username[MAX_STR];
 } typedef Post;
 
 struct Account {
-    char username[MAX_STR];
-    char displayName[MAX_STR];
-    char createdAt[MAX_STR];
-    char note[MAX_STR];
+    wchar_t username[MAX_STR];
+    wchar_t displayName[MAX_STR];
+    wchar_t createdAt[MAX_STR];
+    wchar_t note[MAX_STR];
     //char avatar[];
     //char header[];
     int followingNumber;
@@ -33,18 +33,16 @@ struct Account {
 
 static size_t WriteCallback(void * contents, size_t size, size_t nmemb, void * userp);
 
-void createEndpoint(char * server, char * endpoint, char * argument);
+void createEndpoint(wchar_t * server, wchar_t * endpoint, wchar_t * argument);
 void resetMemory(Memory * data);
 void resetPosts(Post posts[]);
 
-int accessPublicTimeline(char * server);
-int accessPublicAccount(char * server, char * id);
+int accessPublicTimeline(wchar_t * server);
+int accessPublicAccount(wchar_t * server, wchar_t * id);
 
-int createApplication(char * server);
-int getAccessToken(char * server);
-int verifyCredentials(char * server);
-int authorizeUser(char * server, HINSTANCE hinstance);
-
-INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam);
+int createApplication(wchar_t * server);
+int getAccessToken(wchar_t * server);
+int verifyCredentials(wchar_t * server);
+int authorizeUser(wchar_t * server, HINSTANCE hinstance);
 
 #endif

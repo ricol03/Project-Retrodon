@@ -49,25 +49,9 @@ int homeWindow(HWND hwnd) {
         NULL
     );
 
-
-    //const WCHAR * labelText = "é`Àçõaz it works";
-        
-    /*HWND htext = CreateWindow(
-        WC_STATIC,
-        "Trending Content",
-        //L"トレンドコンテンツ",
-        //labelText,
-        WS_VISIBLE | WS_CHILD,
-        25, 25, 100, 50,
-        hwnd,
-        (HMENU)1,
-        GetModuleHandle(NULL),
-        NULL
-    );*/
-
     hsearch = CreateWindow(
         WC_EDIT,
-        "Search the Fediverse",
+        L"Search the Fediverse",
         WS_VISIBLE | WS_CHILD,
         25, 15, 450, 35,
         hwnd,
@@ -78,7 +62,7 @@ int homeWindow(HWND hwnd) {
 
     hlist = CreateWindow(
         WC_LISTVIEW, 
-        "",         
+        L"",         
         WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA,
         50, 0, 480, 300,
         hwnd, 
@@ -90,15 +74,15 @@ int homeWindow(HWND hwnd) {
     LVCOLUMN col = {0};
     col.mask = LVCF_WIDTH | LVCF_TEXT;
     col.cx = 100;
-    col.pszText = "User";
+    col.pszText = L"User";
     ListView_InsertColumn(hlist, 0, &col);
 
     col.cx = 350;
-    col.pszText = "Content";
+    col.pszText = L"Content";
     ListView_InsertColumn(hlist, 1, &col);
 
     col.cx = 150;
-    col.pszText = "Posted at";
+    col.pszText = L"Posted at";
     ListView_InsertColumn(hlist, 2, &col);
 
     ListView_SetIconSpacing(hlist, 100, 60);
@@ -116,8 +100,8 @@ int homeWindow(HWND hwnd) {
     snprintf(celltext, sizeof(celltext), "Instance: %s", serverAddress);
 
     SendMessage(hstatus, SB_SETICON, 0, (LPARAM)LoadIcon(NULL, IDI_WARNING));
-    SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)"Logged out");   // first cell
-    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)celltext);     // second cell
+    SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)"Logged out");
+    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)celltext);
 
     //SendMessage(htext, WM_SETFONT, (WPARAM)htitlefont, (LPARAM)NULL);
 
@@ -141,25 +125,25 @@ int homeWindow(HWND hwnd) {
     HMENU hsubmenusettings    = CreatePopupMenu();
     HMENU hsubmenuabout       = CreatePopupMenu();
 
-    AppendMenu(hsubmenufile, MF_STRING, IDM_FILE_CLOSE, "Exit");
+    AppendMenu(hsubmenufile, MF_STRING, IDM_FILE_CLOSE, L"Exit");
     
-    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 100, "Main page");
-    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 101, "Local");
+    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 100, L"Main page");
+    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 101, L"Local");
     AppendMenu(hsubmenutimefile, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hsubmenutimefile, MF_STRING | MF_CHECKED, 102, "Federation");
+    AppendMenu(hsubmenutimefile, MF_STRING | MF_CHECKED, 102, L"Federation");
     
-    AppendMenu(hsubmenusearch, MF_STRING | MF_GRAYED, IDM_SEARCH_SEARCHBOX, "Test");
-    AppendMenu(hsubmenusettings, MF_STRING, IDM_SETTINGS_SETTINGS, "Preferences...");
+    AppendMenu(hsubmenusearch, MF_STRING | MF_GRAYED, IDM_SEARCH_SEARCHBOX, L"Test");
+    AppendMenu(hsubmenusettings, MF_STRING, IDM_SETTINGS_SETTINGS, L"Preferences...");
 
-    AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_HELP, "Help");
+    AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_HELP, L"Help");
     AppendMenu(hsubmenuabout, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_ABOUT, "About");
+    AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_ABOUT, L"About");
 
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenufile, "File");
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenutimefile, "Timeline");
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusearch, "View");
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusettings, "Options");
-    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenuabout, "Help");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenufile, L"File");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenutimefile, L"Timeline");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusearch, L"View");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenusettings, L"Options");
+    AppendMenu(hmenu, MF_STRING | MF_POPUP, (UINT_PTR)hsubmenuabout, L"Help");
 
     SetMenu(hwnd, hmenu);
 }

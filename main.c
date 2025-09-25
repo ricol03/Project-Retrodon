@@ -1,6 +1,6 @@
 #include "headers/tools.h"
 
-const LPCSTR MAIN_CLASS       = (LPCSTR)"MainWndClass";
+const LPCWSTR MAIN_CLASS       = (LPCWSTR)"MainWndClass";
 
 //janelas
 HWND hwndmain;
@@ -14,8 +14,8 @@ PAINTSTRUCT ps;
 
 HINSTANCE glhinstance;
 
-char serverAddress[128] = {0};
-char authorizationCode[128] = {0};
+wchar_t serverAddress[128] = {0};
+wchar_t authorizationCode[128] = {0};
 
 DWORD wversion, wmajorversion, wminorversion, wbuild;
 
@@ -49,12 +49,15 @@ int preparingApplication() {
         if (result == IDB_CONTINUE_I) {
             saveSettings();
         } else
-            MessageBox(NULL, "Instance could not be saved", "Error", MB_ICONERROR);
+            MessageBox(NULL, L"Instance could not be saved", L"Error", MB_ICONERROR);
     }
 
     /* ------ test ------ */
 
-    accessPublicAccount(serverAddress, "113571402987465211");
+    
+
+    accessPublicAccount(serverAddress, L"113571402987465211");
+
     
     /*imgdata = stbi_load(newimagepath, &x, &y, &c, 4);
 
@@ -72,11 +75,11 @@ int preparingApplication() {
     HWND hfollowers = GetDlgItem(hdlg, IDS_FOLLOWERS_A);
     HWND hnote = GetDlgItem(hdlg, IDS_NOTE_A);
 
-    char following[32];
-    snprintf(following, sizeof(following), "Following: %d", account.followingNumber);
+    wchar_t following[32];
+    swprintf(following, sizeof(following), L"Following: %d", account.followingNumber);
 
-    char followers[32];
-    snprintf(followers, sizeof(followers), "Followers: %d", account.followersNumber);
+    wchar_t followers[32];
+    swprintf(followers, sizeof(followers), L"Followers: %d", account.followersNumber);
 
     SendMessage(hname, WM_SETTEXT, 0, (LPARAM)account.displayName);
     SendMessage(hfollowing, WM_SETTEXT, 0, (LPARAM)following);
@@ -91,7 +94,7 @@ int preparingApplication() {
     checkVersion();
 }
 
-int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PSTR lpcmdline, int nshowcmd) {
+int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdline, int nshowcmd) {
 
     preparingApplication();
 
@@ -101,14 +104,14 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PSTR lpcmdline,
     mainwindowclass.style            = CS_OWNDC;
     mainwindowclass.lpfnWndProc      = MainWindowProc;
     mainwindowclass.hInstance        = glhinstance;
-    mainwindowclass.lpszClassName    = (LPCSTR)MAIN_CLASS;
+    mainwindowclass.lpszClassName    = (LPCWSTR)MAIN_CLASS;
 
     RegisterClass(&mainwindowclass);
 
     hwndmain = CreateWindowEx(
         0,
         MAIN_CLASS,
-        "Retrodon",
+        L"Retrodon",
         WS_OVERLAPPEDWINDOW | WS_SYSMENU | WS_MINIMIZEBOX | WS_ICONIC | WS_ACTIVECAPTION | WS_VSCROLL | WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
         NULL,
@@ -149,7 +152,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 LVITEM item = {0};
                 item.mask = LVIF_TEXT;
                 item.iItem = i;
-                item.pszText = "Example post";
+                item.pszText = L"Example post";
                 ListView_InsertItem(hlist, &item);
             }
 
@@ -168,11 +171,11 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                     int col = plvdi->item.iSubItem;
 
                     if (col == 0)
-                        plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].username;
+                        plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].username;
                     else if (col == 1)
-                        plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].content;
+                        plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].content;
                     else
-                        plvdi->item.pszText = (LPSTR)posts[plvdi->item.iItem].createdAt;
+                        plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].createdAt;
                 }
             }
         }
@@ -185,16 +188,16 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                         if (!getAccessToken(serverAddress)) {
                             if (!verifyCredentials(serverAddress)) {
                                 if (authorizeUser(serverAddress, (HINSTANCE)GetWindowLongPtr(hwndmain, GWLP_HINSTANCE)))
-                                    MessageBox(hwndmain, "Could not authorize user!\nConnection attempt cannot proceed.", "Error", MB_ICONERROR);
+                                    MessageBox(hwndmain, L"Could not authorize user!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
 
                             } else
-                                MessageBox(hwndmain, "Could not verify credentials!\nConnection attempt cannot proceed.", "Error", MB_ICONERROR);
+                                MessageBox(hwndmain, L"Could not verify credentials!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
 
                         } else 
-                            MessageBox(hwndmain, "Could not get access token!\nConnection attempt cannot proceed.", "Error", MB_ICONERROR);
+                            MessageBox(hwndmain, L"Could not get access token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
 
                     } else
-                        MessageBox(hwndmain, "Could not create application!\nConnection attempt cannot proceed.", "Error", MB_ICONERROR);
+                        MessageBox(hwndmain, L"Could not create application!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
                 }
 
                 case IDB_REFRESH: {
@@ -205,7 +208,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                         LVITEM item = {0};
                         item.mask = LVIF_TEXT;
                         item.iItem = i;
-                        item.pszText = "Example post";
+                        item.pszText = L"Example post";
                         ListView_InsertItem(hlist, &item);
                     }
 
@@ -254,7 +257,7 @@ INT_PTR CALLBACK InstanceDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPAR
                     if (GetDlgItemText(hdlg, IDE_INSTANCE_I, serverAddress, sizeof(serverAddress)) > 0) {
                         EndDialog(hdlg, IDB_CONTINUE_I); 
                     } else {
-                        MessageBox(hdlg, "Deve introduzir um endereço válido.", "Erro", MB_ICONERROR | MB_OK);
+                        MessageBox(hdlg, L"Deve introduzir um endereço válido.", L"Erro", MB_ICONERROR | MB_OK);
                     }
 
                     return TRUE;
@@ -346,16 +349,16 @@ int checkVersion() {
     wminorversion = (DWORD)(HIBYTE(LOWORD(wversion)));
 
     /*char version[64];
-    snprintf(version, sizeof(version), "Windows version: %d.%d", wmajorversion, wminorversion);
-*/
+    snprintf(version, sizeof(version), "Windows version: %d.%d", wmajorversion, wminorversion);*/
+
     if (wmajorversion >= 5 && wmajorversion < 11) {
         //MessageBox(NULL, version, "Info", MB_ICONINFORMATION);
         return 0;
     } else if (wmajorversion < 5) {
-        MessageBox(NULL, "This program only runs on Windows 2000 and later.", "Error", MB_ICONERROR);
+        MessageBox(NULL, L"This program only runs on Windows 2000 and later.", L"Error", MB_ICONERROR);
         return 1;
     } else {
-        MessageBox(NULL, "Unknown Windows version. Aborting.", "Error", MB_ICONERROR);
+        MessageBox(NULL, L"Unknown Windows version. Aborting.", L"Error", MB_ICONERROR);
         return 1;
     }
 }

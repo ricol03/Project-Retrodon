@@ -17,6 +17,6 @@ int showInstanceDialog(HINSTANCE hinstance);
 int showAccountDialog(HINSTANCE hinstance);
 
 
-int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PSTR lpcmdline, int nshowcmd);
+int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdline, int nshowcmd);
 
 #endif

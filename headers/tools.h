@@ -1,6 +1,9 @@
 #ifndef TOOLS_H_
 #define TOOLS_H_
 
+#define UNICODE
+#define _UNICODE
+
 //#define STB_IMAGE_IMPLEMENTATION
 
 //constants
@@ -21,5 +24,6 @@
 #include "connections.h"
 #include "file.h"
 #include "main.h"
+#include "strings.h"
 
 #endif
