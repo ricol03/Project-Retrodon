@@ -1,6 +1,8 @@
 #include "headers/tools.h"
 
-void removeHtml(const char * src, char * dest) {
+char * removeHtml(const char * src) {
+    char * dest = malloc(sizeof(char) * MAX_STR);
+    char * point_start = dest;
     boolean tag;
 
     while (*src) {
@@ -9,7 +11,6 @@ void removeHtml(const char * src, char * dest) {
 
             if (*++src == 'b' && *++src == 'r') {
                 *dest++ = '\n';
-                //*dest++ = 'n';
             }
             
         } else if (*src == '>') {
@@ -20,12 +21,15 @@ void removeHtml(const char * src, char * dest) {
         src++;
     }
 
-    *dest = '\0';
+    //point *dest back to the start of the string
+    dest = point_start;
+
+    return dest;
 }
 
 wchar_t * charToWchar(const char *src) {
-    wchar_t * dest;
-    MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, sizeof(src));
+    wchar_t * dest = malloc(sizeof(wchar_t) * MAX_STR);
+    MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, MAX_STR);
     return dest;
 }
 

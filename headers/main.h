@@ -3,6 +3,13 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
+struct Image {
+    int width;
+    int height; 
+    int channels;
+    unsigned char * pixels;
+} typedef Image;
+
 LRESULT CALLBACK MainWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 INT_PTR CALLBACK InstanceDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam);
 INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam);

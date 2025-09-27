@@ -7,7 +7,7 @@ extern size_t stringsize;
 
 extern DWORD wversion, wmajorversion, wminorversion, wbuild;
 
-extern char serverAddress[128];
+extern wchar_t serverAddress[128];
 wchar_t provider[32];
 wchar_t protocol[6];
 wchar_t port[6];
@@ -147,7 +147,7 @@ int readSettings() {
     fr = fopen(SETTINGSFILENAME, "r+b");
 
     if (fr != NULL) {
-        fread(serverAddress, sizeof(serverAddress), 1, fr);
+        fread(serverAddress, _countof(serverAddress), 1, fr);
         return 1;
     } else {
         MessageBox(NULL, L"Settings not found", L"Error", MB_ICONERROR);
@@ -161,7 +161,7 @@ int saveSettings() {
     fw = fopen(SETTINGSFILENAME, "wb");
     
     if (serverAddress != NULL)
-        fwrite(serverAddress, sizeof(serverAddress), 1, fw);
+        fwrite(serverAddress, _countof(serverAddress), 1, fw);
     
     printf("\n%ls", serverAddress);
 

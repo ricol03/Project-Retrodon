@@ -85,6 +85,9 @@ int homeWindow(HWND hwnd) {
     col.pszText = L"Posted at";
     ListView_InsertColumn(hlist, 2, &col);
 
+    col.cx = 0;
+    ListView_InsertColumn(hlist, 3, &col);
+
     ListView_SetIconSpacing(hlist, 100, 60);
 
     hstatus = CreateWindowEx(
@@ -100,8 +103,8 @@ int homeWindow(HWND hwnd) {
     snprintf(celltext, sizeof(celltext), "Instance: %s", serverAddress);
 
     SendMessage(hstatus, SB_SETICON, 0, (LPARAM)LoadIcon(NULL, IDI_WARNING));
-    SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)"Logged out");
-    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)celltext);
+    SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)charToWchar("Logged out"));
+    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)charToWchar(celltext));
 
     //SendMessage(htext, WM_SETFONT, (WPARAM)htitlefont, (LPARAM)NULL);
 

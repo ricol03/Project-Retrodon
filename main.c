@@ -1,4 +1,6 @@
 #include "headers/tools.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "headers/stb_image.h"
 
 const LPCWSTR MAIN_CLASS       = (LPCWSTR)"MainWndClass";
 
@@ -22,7 +24,12 @@ DWORD wversion, wmajorversion, wminorversion, wbuild;
 extern Post posts[64];
 extern Account account;
 
+extern Memory imageData;
 
+extern wchar_t finallink[2048];
+
+Image avatar;
+Image banner;
 
 //TODO: could do a separate file for dialogs
 
@@ -36,6 +43,51 @@ int showAccountDialog(HINSTANCE hinstance) {
     return DialogBox(hinstance, MAKEINTRESOURCE(IDD_DIALOG_ACCOUNT), NULL, CodeDialogProc);
 }
 
+//TODO: could do a separate file for image manipulation
+
+HBITMAP CreateHbitmapFromPixels(unsigned char * pixels, int srcW, int srcH, int dstW, int dstH) {
+    HDC hdc = GetDC(NULL);
+
+    BITMAPINFO bmi;
+    ZeroMemory(&bmi, sizeof(bmi));
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = srcW;
+    bmi.bmiHeader.biHeight = -srcH; // top-down DIB
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void * pvBits = NULL;
+    HBITMAP hSrcBmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+
+    if (hSrcBmp && pvBits) {
+        memcpy(pvBits, pixels, srcW * srcH * 4);
+    }
+
+    HDC hdcSrc = CreateCompatibleDC(hdc);
+    SelectObject(hdcSrc, hSrcBmp);
+
+    BITMAPINFO dbmi = bmi;
+    dbmi.bmiHeader.biWidth = dstW;
+    dbmi.bmiHeader.biHeight = -dstH;
+
+    void * dstBits = NULL;
+    HBITMAP hDstBmp = CreateDIBSection(hdc, &dbmi, DIB_RGB_COLORS, &dstBits, NULL, 0);
+
+    HDC hdcDst = CreateCompatibleDC(hdc);
+    SelectObject(hdcDst, hDstBmp);
+
+    SetStretchBltMode(hdcDst, HALFTONE);
+    StretchBlt(hdcDst, 0, 0, dstW, dstH, hdcSrc, 0, 0, srcW, srcH, SRCCOPY);
+
+    DeleteDC(hdcSrc);
+    DeleteDC(hdcDst);
+    DeleteObject(hSrcBmp);
+    ReleaseDC(NULL, hdc);
+
+    //return hSrcBmp;
+    return hDstBmp;
+}
 
 int preparingApplication() {
     INITCOMMONCONTROLSEX icex;
@@ -52,43 +104,9 @@ int preparingApplication() {
             MessageBox(NULL, L"Instance could not be saved", L"Error", MB_ICONERROR);
     }
 
-    /* ------ test ------ */
+    /* ------ test zone ------ */
 
-    
-
-    accessPublicAccount(serverAddress, L"113571402987465211");
-
-    
-    /*imgdata = stbi_load(newimagepath, &x, &y, &c, 4);
-
-    if (imgdata) {
-        MessageBox(NULL, L"Funcionou", L"Info", MB_ICONINFORMATION);
-    } else {
-        MessageBox(NULL, L"Não funcionou", L"Error", MB_ICONERROR);
-        printf("%s", stbi_failure_reason());
-    }*/
-
-
-    HWND hdlg = CreateDialog(glhinstance, MAKEINTRESOURCE(IDD_DIALOG_ACCOUNT), NULL, AccountDialogProc);
-    HWND hname = GetDlgItem(hdlg, IDS_NAME_A);
-    HWND hfollowing = GetDlgItem(hdlg, IDS_FOLLOWING_A);
-    HWND hfollowers = GetDlgItem(hdlg, IDS_FOLLOWERS_A);
-    HWND hnote = GetDlgItem(hdlg, IDS_NOTE_A);
-
-    wchar_t following[32];
-    swprintf(following, sizeof(following), L"Following: %d", account.followingNumber);
-
-    wchar_t followers[32];
-    swprintf(followers, sizeof(followers), L"Followers: %d", account.followersNumber);
-
-    SendMessage(hname, WM_SETTEXT, 0, (LPARAM)account.displayName);
-    SendMessage(hfollowing, WM_SETTEXT, 0, (LPARAM)following);
-    SendMessage(hfollowers, WM_SETTEXT, 0, (LPARAM)followers);
-    SendMessage(hnote, WM_SETTEXT, 0, (LPARAM)account.note);
-
-    ShowWindow(hdlg, SW_SHOW);
-    
-    /*--------------------*/
+    /*-------------------------*/
 
     createDirectory();
     checkVersion();
@@ -163,19 +181,46 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
         case WM_NOTIFY: {
             LPNMHDR pnmh = (LPNMHDR)lparam;
-            if (pnmh->idFrom == IDC_LISTVIEW && pnmh->code == LVN_GETDISPINFO) {
-                NMLVDISPINFO *plvdi = (NMLVDISPINFO *)lparam;
-                if (plvdi->item.mask & LVIF_TEXT) {
 
-                    int row = plvdi->item.iItem;
-                    int col = plvdi->item.iSubItem;
+            switch (pnmh->code) {
+                case NM_DBLCLK: {
+                    LPNMITEMACTIVATE pia = (LPNMITEMACTIVATE)lparam;
 
-                    if (col == 0)
-                        plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].username;
-                    else if (col == 1)
-                        plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].content;
-                    else
-                        plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].createdAt;
+                    // index of the selected item
+                    int iItem = pia->iItem;
+                    if (iItem >= 0) {
+                        wchar_t buffer[MAX_STR];
+                        ListView_GetItemText(pia->hdr.hwndFrom, iItem, 3, buffer, MAX_STR);
+
+                        accessPublicAccount(serverAddress, buffer);
+
+                        HWND hdlg = CreateDialog(glhinstance, MAKEINTRESOURCE(IDD_DIALOG_ACCOUNT), NULL, AccountDialogProc);
+
+                        ShowWindow(hdlg, SW_SHOW);
+                        UpdateWindow(hdlg);
+
+                    }
+                    break;
+                }
+
+                case LVN_GETDISPINFO: {
+                    if (pnmh->idFrom == IDC_LISTVIEW) {
+                        NMLVDISPINFO *plvdi = (NMLVDISPINFO *)lparam;
+                        if (plvdi->item.mask & LVIF_TEXT) {
+
+                            int row = plvdi->item.iItem;
+                            int col = plvdi->item.iSubItem;
+
+                            if (col == 0)
+                                plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].username;
+                            else if (col == 1)
+                                plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].content;
+                            else if (col == 2)
+                                plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].createdAt;
+                            else 
+                                plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].id;
+                        }
+                    }
                 }
             }
         }
@@ -201,7 +246,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 }
 
                 case IDB_REFRESH: {
-                    //TODO: this behaviour should change whether the user is logged in or not
+                    //TODO: this behaviour should change whether the timeline is local, public, etc.
                     accessPublicTimeline(serverAddress);
 
                     for (int i = 0; i < MAX_POSTS; i++) {
@@ -314,6 +359,59 @@ INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM l
 
 INT_PTR CALLBACK AccountDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam) {
     switch(message) {
+        HBITMAP hbmpbanner;
+        case WM_INITDIALOG: {
+            //accessPublicAccount(serverAddress, L"114582230083967571");
+            getImage(account.avatarUrl);
+
+            avatar.pixels = stbi_load_from_memory(
+                imageData.response, imageData.size, &avatar.width, &avatar.height, &avatar.channels, 4);
+
+            free(imageData.response);
+
+            getImage(account.bannerUrl);
+            
+            banner.pixels = stbi_load_from_memory(
+                imageData.response, imageData.size, &banner.width, &banner.height, &banner.channels, 4);
+
+            free(imageData.response);
+
+            HBITMAP hbmpavatar = CreateHbitmapFromPixels(avatar.pixels, avatar.width, avatar.height, 112, 112);
+            hbmpbanner = CreateHbitmapFromPixels(banner.pixels, banner.width, banner.height, 515, 100);
+
+            if (hbmpavatar) {
+                HWND havatar = GetDlgItem(hdlg, IDP_AVATAR_A);
+                SendMessage(havatar, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
+            } else {
+                MessageBox(NULL, L"Avatar cannot be shown", L"Error", MB_ICONERROR);
+            }
+            
+            if (hbmpbanner) {
+                HWND hbanner = GetDlgItem(hdlg, IDP_BANNER_A);
+                SendMessage(hbanner, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpbanner);
+            } else {
+                MessageBox(NULL, L"Banner cannot be shown", L"Error", MB_ICONERROR);
+            }
+
+            HWND hname = GetDlgItem(hdlg, IDS_NAME_A);
+            HWND hfollowing = GetDlgItem(hdlg, IDS_FOLLOWING_A);
+            HWND hfollowers = GetDlgItem(hdlg, IDS_FOLLOWERS_A);
+            HWND hnote = GetDlgItem(hdlg, IDS_NOTE_A);
+
+            wchar_t following[32];
+            swprintf(following, sizeof(following), L"Following: %d", account.followingNumber);
+
+            wchar_t followers[32];
+            swprintf(followers, sizeof(followers), L"Followers: %d", account.followersNumber);
+
+            SendMessage(hname, WM_SETTEXT, 0, (LPARAM)account.displayName);
+            SendMessage(hfollowing, WM_SETTEXT, 0, (LPARAM)following);
+            SendMessage(hfollowers, WM_SETTEXT, 0, (LPARAM)followers);
+            SendMessage(hnote, WM_SETTEXT, 0, (LPARAM)account.note);
+
+
+        }
+
         case WM_COMMAND:
             switch(wparam) {
                 case IDB_OK_A: {
@@ -322,6 +420,9 @@ INT_PTR CALLBACK AccountDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARA
                 }    
             }
             break;
+
+        
+
 
         case WM_PAINT: {
             HDC hdc = BeginPaint(hdlg, &ps);

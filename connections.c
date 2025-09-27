@@ -10,12 +10,13 @@ Memory chunk = {0};
 Memory chunk2 = {0};
 Memory chunk3 = {0};
 Memory data = {0};
+Memory imageData = {0};
 
-char * client_id; 
+char * client_id;  
 char * client_secret;
 char token[512];
 
-wchar_t finallink[1024];
+wchar_t finallink[2048];
 extern wchar_t authorizationCode[128];
 
 Post posts[MAX_POSTS];
@@ -47,12 +48,39 @@ void resetPosts(Post posts[]) {
     memset(posts, 0, sizeof(posts));
 }
 
+void resetAccount(Account * account) {
+    memset(account, 0, sizeof(* account));
+}
+
 //FIXME: need to fix the incorrect links that are created
 void createEndpoint(wchar_t * server, wchar_t * endpoint, wchar_t * argument) {
-    swprintf(finallink, sizeof(finallink) / sizeof(wchar_t), L"https://%s%s%s", server, endpoint, argument);
+    swprintf(finallink, _countof(finallink), L"https://%s%ls%ls", server, endpoint, argument);
     MessageBox(NULL, finallink, L"Info", MB_ICONINFORMATION);
 }
 
+void getImage(wchar_t * link) {
+    resetMemory(&imageData);
+    CURL * curl = curl_easy_init();
+
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(link));
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&imageData);
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+        CURLcode result = curl_easy_perform(curl);
+
+        if (result != CURLE_OK) {
+            MessageBox(NULL, link, L"ERROR", MB_ICONASTERISK);
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+            MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
+        } else
+            curl_easy_cleanup(curl);
+    }
+
+    curl_global_cleanup();
+}
 
 /* public connections */
 
@@ -66,13 +94,13 @@ int accessPublicTimeline(wchar_t * server) {
         resetPosts(posts);
 
         createEndpoint(server, L"/api/v1/timelines/public", L"?limit=64");
-        curl_easy_setopt(curl, CURLOPT_URL, finallink);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
 
-        //TODO: do a while, while the curl perform failed and the user clicked retry
+        //TODO: do a while, while the curl performs failed and the user clicks retry
         /*while ()
         {}*/
         
@@ -82,8 +110,6 @@ int accessPublicTimeline(wchar_t * server) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
             MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
-            //MessageBox(NULL, "Instance's info was retrieved", "Info", MB_ICONINFORMATION | MB_OK);
-
             cJSON * root = cJSON_Parse(data.response);
 
             if (root == NULL) {
@@ -107,13 +133,16 @@ int accessPublicTimeline(wchar_t * server) {
                     cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
                     cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
 
+                    cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+
+
                     if (created && cJSON_IsString(created))
                         wcscpy(posts[i].createdAt, charToWchar(created->valuestring));
                     else
                         posts[i].createdAt[0] = '\0';
 
                     if (content && cJSON_IsString(content))
-                        wcscpy(posts[i].content, charToWchar(content->valuestring));
+                        wcscpy(posts[i].content, charToWchar(removeHtml(content->valuestring)));
                     else
                         posts[i].content[0] = '\0';
 
@@ -122,9 +151,15 @@ int accessPublicTimeline(wchar_t * server) {
                     else
                         posts[i].username[0] = '\0';
 
-                    posts[i].createdAt[MAX_STR - 1] = '\0';
+                    if (id && cJSON_IsString(id))
+                        wcscpy(posts[i].id, charToWchar(id->valuestring));
+                    else
+                        posts[i].id[0] = '\0';
+
+                    posts[i].createdAt[MAX_STR - 1]  = '\0';
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
+                    posts[i].id[MAX_STR - 1]         = '\0';
 
                     i++;
                 }
@@ -147,11 +182,12 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
     CURL * curl = curl_easy_init();
 
     if (curl) {
+        resetAccount(&account);
         resetMemory(&chunk2);
         createEndpoint(server, L"/api/v1/accounts/", id);
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk2);
@@ -164,10 +200,11 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
         } else {
             //MessageBox(NULL, client_id->valuestring, "Info", MB_ICONINFORMATION | MB_OK);
 
-            printf("\n\n(TOKEN) Server response:\n%s\n", chunk2.response);
+            //printf("\n\n(TOKEN) Server response:\n%s\n", chunk2.response);
 
             cJSON *json = cJSON_Parse(chunk2.response);
             if (json) {
+                cJSON * id = cJSON_GetObjectItemCaseSensitive(json, "id");
 
                 cJSON * username  = cJSON_GetObjectItemCaseSensitive(json, "username");
                 cJSON * display_name  = cJSON_GetObjectItemCaseSensitive(json, "display_name");
@@ -175,34 +212,25 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
                 cJSON * created_at  = cJSON_GetObjectItemCaseSensitive(json, "created_at");
                 cJSON * note = cJSON_GetObjectItemCaseSensitive(json, "note");
 
+                cJSON * avatar_url = cJSON_GetObjectItemCaseSensitive(json, "avatar");
+                cJSON * banner_url = cJSON_GetObjectItemCaseSensitive(json, "header");
+
                 cJSON * following = cJSON_GetObjectItemCaseSensitive(json, "following_count");
                 cJSON * followers = cJSON_GetObjectItemCaseSensitive(json, "followers_count");
+
+                wcscpy(account.id, charToWchar(id->valuestring));
 
                 wcscpy(account.username, charToWchar(username->valuestring));
                 wcscpy(account.displayName, charToWchar(display_name->valuestring));
                 wcscpy(account.createdAt, charToWchar(created_at->valuestring));
+                wcscpy(account.note, charToWchar(removeHtml(note->valuestring)));
+                wcscpy(account.avatarUrl, charToWchar(avatar_url->valuestring));
+                wcscpy(account.bannerUrl, charToWchar(banner_url->valuestring));
                 account.followingNumber = following->valueint;
                 account.followersNumber = followers->valueint;
 
-                char * final = malloc(MAX_STR * sizeof(char));
-                removeHtml(note->valuestring, final);
-                
-
-                wcscpy(account.note, charToWchar(final));
-
-
-                /*cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
-                if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
-                    MessageBox(NULL, "Deu token", "Aviso", MB_ICONEXCLAMATION);
-                    printf("Access token: %s\n", access_token->valuestring);
-                    strcpy(token, access_token->valuestring);
-                } else {
-                    printf("No access_token in JSON\n");
-                }*/
                 cJSON_Delete(json);
             }
-
-
         }            
         
         curl_easy_cleanup(curl);
