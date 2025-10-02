@@ -67,6 +67,6 @@
 
 //file names
 
-#define SETTINGSFILENAME "settings.bin"
+#define SETTINGSFILENAME L"settings.bin"
 
 #endif

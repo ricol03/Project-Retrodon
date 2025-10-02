@@ -4,6 +4,7 @@
 #define STRINGS_H_
 
 char * removeHtml(const char * src);
+char * removeLetters(char * src);
 wchar_t * charToWchar(const char *src);
 char * wcharToChar(const wchar_t *src);
 

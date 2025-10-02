@@ -15,6 +15,8 @@
 #include <commctrl.h>
 #include <shlobj.h>
 
+#include <wchar.h>
+
 //library headers
 #include "../cjson/cJSON.h"
 #include "stb_image.h"

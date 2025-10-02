@@ -54,7 +54,7 @@ void resetAccount(Account * account) {
 
 //FIXME: need to fix the incorrect links that are created
 void createEndpoint(wchar_t * server, wchar_t * endpoint, wchar_t * argument) {
-    swprintf(finallink, _countof(finallink), L"https://%s%ls%ls", server, endpoint, argument);
+    swprintf(finallink, _countof(finallink), L"https://%ls%ls%ls", server, endpoint, argument);
     MessageBox(NULL, finallink, L"Info", MB_ICONINFORMATION);
 }
 
@@ -135,10 +135,9 @@ int accessPublicTimeline(wchar_t * server) {
 
                     cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
 
-
-                    if (created && cJSON_IsString(created))
-                        wcscpy(posts[i].createdAt, charToWchar(created->valuestring));
-                    else
+                    if (created && cJSON_IsString(created)) {
+                        wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
+                    } else
                         posts[i].createdAt[0] = '\0';
 
                     if (content && cJSON_IsString(content))

@@ -1,12 +1,18 @@
 #include "headers/tools.h"
 
-extern char serverAddress[128];
+extern wchar_t serverAddress[128];
 
 extern HWND hrefresh;
 extern HWND hlogin;
 extern HWND hsearch;
 extern HWND hlist;
 extern HWND hstatus;
+
+extern HWND hinstance_edit, hinstance_title, hinstance_subtitle, hinstance_button;
+
+extern HWND hfollow_button, hfollowing_static, hfollowers_static, hname_static, hnote_static, havatar_area, hbanner_area, hok_button;
+
+HINSTANCE hinstance;
 
 int homeWindow(HWND hwnd) {
     //destroyVisibleChildWindows(hwnd);
@@ -15,28 +21,20 @@ int homeWindow(HWND hwnd) {
 
     GetWindowRect(hwnd, &rcClient);
     
-    /*HWND htesttext = CreateWindow(
-        WC_STATIC, 
-        "Under construction",
-        WS_VISIBLE | WS_CHILD,
-        250, 150, 450, 200,
-        hwnd, 
-        (HMENU)998,
-        GetModuleHandle(NULL),
-        NULL
-    );*/
-
-    //TODO: add icon instead of text
     hrefresh = CreateWindow(
         WC_BUTTON,
-        TEXT("R"),
-        WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | WS_VISIBLE,
+        NULL,
+        WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | BS_ICON | WS_VISIBLE,
         rcClient.left + 25, rcClient.bottom - 25, 0, 0,
         hwnd,
         (HMENU)IDB_REFRESH,
         GetModuleHandle(NULL),
         NULL
     );
+
+    //FIXME: example icon
+    HICON hicon = LoadIcon(hinstance, IDI_WARNING);
+    SendMessage(hrefresh, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hicon);
 
     hlogin = CreateWindow(
         WC_BUTTON,
@@ -99,27 +97,13 @@ int homeWindow(HWND hwnd) {
     int parts[] = {30, 200, -1};
     SendMessage(hstatus, SB_SETPARTS, 3, (LPARAM)parts);
 
-    char celltext[512];
-    snprintf(celltext, sizeof(celltext), "Instance: %s", serverAddress);
+    wchar_t celltext[512];
+    swprintf(celltext, sizeof(celltext), L"Instance: %ls", serverAddress);
 
+    //FIXME: example icon
     SendMessage(hstatus, SB_SETICON, 0, (LPARAM)LoadIcon(NULL, IDI_WARNING));
     SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)charToWchar("Logged out"));
-    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)charToWchar(celltext));
-
-    //SendMessage(htext, WM_SETFONT, (WPARAM)htitlefont, (LPARAM)NULL);
-
-    /*HWND hbutton = CreateWindow(
-        WC_BUTTON,
-        "Search anime",
-        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-        400, 25, 120, 30,
-        hwnd,
-        (HMENU)IDW_MAIN_BUTTON_SEARCH,
-        GetModuleHandle(NULL),
-        NULL
-    );*/
-
-    //SendMessage(hbutton, WM_SETFONT, (WPARAM)hfont, (LPARAM)NULL);
+    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)celltext);
 
     HMENU hmenu = CreateMenu();
     HMENU hsubmenufile        = CreatePopupMenu();
@@ -150,3 +134,145 @@ int homeWindow(HWND hwnd) {
 
     SetMenu(hwnd, hmenu);
 }
+
+int instanceWindow(HWND hwnd) {
+    hinstance_title = CreateWindow(
+        WC_STATIC,
+        L"Introduza o endereço da instância:",
+        WS_VISIBLE | WS_CHILD,
+        25, 20, 250, 25,
+        hwnd,
+        (HMENU) 15,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hinstance_edit = CreateWindow(
+        WC_EDIT,
+        NULL,
+        WS_VISIBLE | WS_CHILD,
+        25, 50, 350, 20,
+        hwnd,
+        (HMENU) IDE_INSTANCE_I,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    // TODO: XP only; must check version
+    //SendMessage(hinstance_edit, EM_SETCUEBANNER, 0, (LPARAM)L"(ex. ""mastodon.social"")");
+
+    hinstance_subtitle = CreateWindow(
+        WC_STATIC,
+        L"(ex. ""mastodon.social"")",
+        WS_VISIBLE | WS_CHILD,
+        225, 75, 250, 25,
+        hwnd,
+        (HMENU) 15,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hinstance_button = CreateWindow(
+        WC_BUTTON,
+        L"Continuar",
+        WS_VISIBLE | WS_CHILD,
+        295, 105, 80, 30,
+        hwnd,
+        (HMENU) IDB_CONTINUE_I,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+}
+
+int accountWindow(HWND hwnd) {
+    hfollow_button = CreateWindow(
+        WC_BUTTON,
+        L"Follow",
+        WS_VISIBLE | WS_CHILD,
+        490, 145, 80, 30,
+        hwnd,
+        (HMENU) IDB_FOLLOW_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hfollowing_static = CreateWindow(
+        WC_STATIC,
+        L"Following: ",
+        WS_VISIBLE | WS_CHILD,
+        175, 165, 120, 18,
+        hwnd,
+        (HMENU) IDS_FOLLOWING_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hfollowers_static = CreateWindow(
+        WC_STATIC,
+        L"Followers: ",
+        WS_VISIBLE | WS_CHILD,
+        315, 165, 120, 18,
+        hwnd,
+        (HMENU) IDS_FOLLOWERS_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hname_static = CreateWindow(
+        WC_STATIC,
+        L"Followers: ",
+        WS_VISIBLE | WS_CHILD,
+        175, 135, 140, 18,
+        hwnd,
+        (HMENU) IDS_NAME_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hnote_static = CreateWindow(
+        WC_STATIC,
+        L"note",
+        WS_VISIBLE | WS_CHILD,
+        40, 210, 420, 100,
+        hwnd,
+        (HMENU) IDS_NOTE_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    havatar_area = CreateWindow(
+        WC_STATIC,
+        L"",
+        SS_BITMAP | SS_OWNERDRAW | WS_VISIBLE | WS_CHILD,
+        40, 75, 128, 128,
+        hwnd,
+        (HMENU) IDP_AVATAR_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hbanner_area = CreateWindow(
+        WC_STATIC,
+        L"",
+        SS_BITMAP | SS_OWNERDRAW | WS_VISIBLE | WS_CHILD,
+        2, 2, 570, 125,
+        hwnd,
+        (HMENU) IDP_BANNER_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hok_button = CreateWindow(
+        WC_BUTTON,
+        L"OK",
+        WS_VISIBLE | WS_CHILD,
+        490, 300, 80, 30,
+        hwnd,
+        (HMENU) IDB_OK_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+}
+

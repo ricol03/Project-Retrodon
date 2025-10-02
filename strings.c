@@ -27,6 +27,20 @@ char * removeHtml(const char * src) {
     return dest;
 }
 
+char * removeLetters(char * src) {
+    char * final = malloc(MAX_STR);
+
+    char * first = strtok(src, "T");
+    char * second = strtok(NULL, ".");
+
+    if (first && second)
+        snprintf(final, MAX_STR, "%s %s", first, second);
+    else
+        snprintf(final, MAX_STR, "%s", "(date unavailable)"); 
+
+    return final;
+}
+
 wchar_t * charToWchar(const char *src) {
     wchar_t * dest = malloc(sizeof(wchar_t) * MAX_STR);
     MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, MAX_STR);

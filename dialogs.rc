@@ -6,20 +6,36 @@
 #include <commctrl.h>
 #include <richedit.h>
 #include "headers/const.h"
-
+#include <winres.h>
 
 //
 // Dialog resources
 //
-LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
-IDD_DIALOG_INSTANCE DIALOGEX 0, 0, 200, 90
-STYLE DS_3DLOOK | DS_CENTER | DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
+COLORSCRDLG DIALOG 16, 16, 120, 141
+STYLE DS_MODALFRAME | WS_CAPTION | WS_VISIBLE | WS_SYSMENU
+CAPTION "Color Scroll Scrollbars"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CTEXT "&Red", IDC_STATIC, 8, 8, 24, 8, NOT WS_GROUP
+    SCROLLBAR 10,8,20,24,100, SBS_VERT | WS_TABSTOP
+    CTEXT "0", 13, 8, 124, 24, 8, NOT WS_GROUP
+    CTEXT "&Green", IDC_STATIC, 48, 8, 24, 8, NOT WS_GROUP
+    SCROLLBAR 11,48,20,24,100, SBS_VERT | WS_TABSTOP
+    CTEXT "0", 14, 48, 124, 24, 8, NOT WS_GROUP
+    CTEXT "&Blue", IDC_STATIC, 89, 8, 24, 8, NOT WS_GROUP
+    SCROLLBAR 12,89,20,24,100, SBS_VERT | WS_TABSTOP
+    CTEXT "0", 15, 89, 124, 24, 8, NOT WS_GROUP
+END
+
+
+IDD_DIALOG_INSTANCE DIALOG 0, 0, 200, 90
+STYLE DS_MODALFRAME | WS_CAPTION | WS_VISIBLE | WS_SYSMENU
 CAPTION "Link da instância"
 FONT 9, "MS Shell Dlg 2"
 BEGIN
-    LTEXT           "Introduza o endereço da instância:", -1, 10, 7, 180, 9
+    CTEXT           "Introduza o endereço da instância:", -1, 10, 7, 180, 9
     EDITTEXT        IDE_INSTANCE_I, 10, 21, 180, 14, ES_AUTOHSCROLL
-    LTEXT           "(ex. ""https://mastodon.social"")", -1, 10, 40, 180, 9
+    CTEXT           "(ex. ""https://mastodon.social"")", -1, 10, 40, 180, 9
     DEFPUSHBUTTON   "Continuar", IDB_CONTINUE_I, 130, 65, 60, 14
 END
 
@@ -37,8 +53,7 @@ FONT 9, "Ms Shell Dlg 2"
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_DIALOG_ACCOUNT DIALOG 0, 0, 300, 175
-STYLE DS_3DLOOK | DS_CENTER | DS_SETFONT | DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_SYSMENU
-CAPTION "Account information"
+STYLE DS_3DLOOK | DS_CENTER | DS_SETFONT | DS_SHELLFONT | WS_CAPTION | WS_SYSMENU | WS_VISIBLE
 FONT 9, "Ms Shell Dlg 2"
 {
     PUSHBUTTON      "Follow", IDB_FOLLOW_A, 233, 71, 54, 17, 0, WS_EX_LEFT

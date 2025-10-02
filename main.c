@@ -2,15 +2,27 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "headers/stb_image.h"
 
-const LPCWSTR MAIN_CLASS       = (LPCWSTR)"MainWndClass";
+//TODO: fazer compilação i686
 
-//janelas
-HWND hwndmain;
+const LPCWSTR MAIN_CLASS           = L"MainWndClass";
+const LPCWSTR INSTANCE_CLASS       = L"InstanceWndClass";
+const LPCWSTR ACCOUNT_CLASS        = L"AccountWndClass";
+
+// windows
+HWND hwndmain, hwndinstance, hwndaccount;
+
+
 HWND hrefresh;
 HWND hlogin;
 HWND hsearch;
 HWND hlist;
 HWND hstatus;
+
+HWND hinstance_edit, hinstance_title, hinstance_subtitle, hinstance_button;
+
+HWND hfollow_button, hfollowing_static, hfollowers_static, hname_static, hnote_static, havatar_area, hbanner_area, hok_button;
+
+
 
 PAINTSTRUCT ps;
 
@@ -31,9 +43,9 @@ extern wchar_t finallink[2048];
 Image avatar;
 Image banner;
 
-//TODO: could do a separate file for dialogs
+//TODO: could do a separate file for dialog windows 
 
-int showInstanceDialog(HINSTANCE hinstance) {
+/*int showInstanceDialog(HINSTANCE hinstance) {
     return DialogBox(hinstance, MAKEINTRESOURCE(IDD_DIALOG_INSTANCE), hwndmain, InstanceDialogProc);
 }
 int showCodeDialog(HINSTANCE hinstance) {
@@ -41,7 +53,7 @@ int showCodeDialog(HINSTANCE hinstance) {
 }
 int showAccountDialog(HINSTANCE hinstance) {
     return DialogBox(hinstance, MAKEINTRESOURCE(IDD_DIALOG_ACCOUNT), NULL, CodeDialogProc);
-}
+}*/
 
 //TODO: could do a separate file for image manipulation
 
@@ -95,59 +107,131 @@ int preparingApplication() {
     icex.dwICC = ICC_LISTVIEW_CLASSES;
     InitCommonControlsEx(&icex);
 
-    if (!readSettings()) {
-        int result = showInstanceDialog(glhinstance);
+    createDirectory();
 
-        if (result == IDB_CONTINUE_I) {
-            saveSettings();
-        } else
-            MessageBox(NULL, L"Instance could not be saved", L"Error", MB_ICONERROR);
+    if (!readSettings()) {
+
+        #pragma region InstanceWindow
+
+        WNDCLASS instancewindowclass = { 0 };
+
+        instancewindowclass.style            = CS_OWNDC;
+        instancewindowclass.lpfnWndProc      = InstanceWindowProc;
+        instancewindowclass.hInstance        = glhinstance;
+        instancewindowclass.lpszClassName    = (LPCWSTR)INSTANCE_CLASS;
+
+        RegisterClass(&instancewindowclass);
+
+        hwndinstance = CreateWindowEx(
+            0,
+            INSTANCE_CLASS,
+            L"Instance",
+            WS_OVERLAPPEDWINDOW | WS_MAXIMIZEBOX | WS_THICKFRAME,
+            CW_USEDEFAULT, CW_USEDEFAULT, 400, 180,
+            NULL,
+            NULL,
+            glhinstance,
+            NULL
+        );
+        
+        if (hwndinstance == NULL) {
+            wchar_t error[512];
+            swprintf(error, 512, L"Error: %lu", GetLastError());
+            MessageBox(NULL, error, L"Error", MB_ICONERROR);
+            MessageBox(NULL, L"Unable to create window", 
+                    L"Error", MB_ICONERROR | MB_OK);
+            return 0;
+        }
+
+        #pragma endregion
+
+        ShowWindow(hwndinstance, SW_SHOW);
+        UpdateWindow(hwndinstance);
+
+        MSG msg;
+        while (IsWindow(hwndinstance) && GetMessage(&msg, NULL, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
     }
 
-    /* ------ test zone ------ */
-
-    /*-------------------------*/
-
-    createDirectory();
+    
     checkVersion();
+
+    return 1;
 }
 
 int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdline, int nshowcmd) {
 
-    preparingApplication();
+    glhinstance = hinstance;
 
-    #pragma region MainWindow
-    WNDCLASS mainwindowclass = { 0 };
+    if (preparingApplication()) {
 
-    mainwindowclass.style            = CS_OWNDC;
-    mainwindowclass.lpfnWndProc      = MainWindowProc;
-    mainwindowclass.hInstance        = glhinstance;
-    mainwindowclass.lpszClassName    = (LPCWSTR)MAIN_CLASS;
+        #pragma region MainWindow
+        WNDCLASS mainwindowclass = { 0 };
 
-    RegisterClass(&mainwindowclass);
+        mainwindowclass.style            = CS_OWNDC;
+        mainwindowclass.lpfnWndProc      = MainWindowProc;
+        mainwindowclass.hInstance        = glhinstance;
+        mainwindowclass.lpszClassName    = (LPCWSTR)MAIN_CLASS;
 
-    hwndmain = CreateWindowEx(
-        0,
-        MAIN_CLASS,
-        L"Retrodon",
-        WS_OVERLAPPEDWINDOW | WS_SYSMENU | WS_MINIMIZEBOX | WS_ICONIC | WS_ACTIVECAPTION | WS_VSCROLL | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
-        NULL,
-        NULL,
-        glhinstance,
-        NULL
-    );
-    
-    if (hwndmain == NULL) {
-        MessageBoxW(NULL, L"Unable to create window", 
-                L"Error", MB_ICONERROR | MB_OK);
-        return 0;
-    } else {
-        ShowWindow(hwndmain, SW_SHOW);
-        UpdateWindow(hwndmain);
-    }
+        RegisterClass(&mainwindowclass);
+
+        hwndmain = CreateWindowEx(
+            0,
+            MAIN_CLASS,
+            L"Retrodon",
+            WS_OVERLAPPEDWINDOW | WS_SYSMENU | WS_MINIMIZEBOX | WS_ICONIC | WS_ACTIVECAPTION | WS_VISIBLE,
+            CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
+            NULL,
+            NULL,
+            glhinstance,
+            NULL
+        );
         
-    #pragma endregion
+        if (hwndmain == NULL) {
+            wchar_t error[512];
+            swprintf(error, 512, L"Error: %lu", GetLastError());
+            MessageBox(NULL, error, L"Error", MB_ICONERROR);
+            MessageBox(NULL, L"Unable to create window", 
+                    L"Error", MB_ICONERROR | MB_OK);
+            return 0;
+        }
+            
+        #pragma endregion
+
+        #pragma region AccountWindow
+        WNDCLASS accountwindowclass = { 0 };
+
+        accountwindowclass.style            = CS_OWNDC;
+        accountwindowclass.lpfnWndProc      = AccountWindowProc;
+        accountwindowclass.hInstance        = glhinstance;
+        accountwindowclass.lpszClassName    = (LPCWSTR)ACCOUNT_CLASS;
+
+        RegisterClass(&accountwindowclass);
+
+        hwndaccount = CreateWindowEx(
+            0,
+            ACCOUNT_CLASS,
+            L"Account",
+            WS_OVERLAPPEDWINDOW | WS_MAXIMIZEBOX | WS_THICKFRAME,
+            CW_USEDEFAULT, CW_USEDEFAULT, 600, 375,
+            NULL,
+            NULL,
+            glhinstance,
+            NULL
+        );
+        
+        if (hwndaccount == NULL) {
+            wchar_t error[512];
+            swprintf(error, 512, L"Error: %lu", GetLastError());
+            MessageBox(NULL, error, L"Error", MB_ICONERROR);
+            MessageBox(NULL, L"Unable to create window", 
+                    L"Error", MB_ICONERROR | MB_OK);
+            return 0;
+        }
+    
+    }   
 
     MSG msg = { 0 };
 
@@ -164,6 +248,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
     switch (message) {
         case WM_CREATE: {
             homeWindow(hwnd);
+
             accessPublicTimeline(serverAddress);
 
             for (int i = 0; i < MAX_POSTS; i++) {
@@ -194,10 +279,10 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                         accessPublicAccount(serverAddress, buffer);
 
-                        HWND hdlg = CreateDialog(glhinstance, MAKEINTRESOURCE(IDD_DIALOG_ACCOUNT), NULL, AccountDialogProc);
 
-                        ShowWindow(hdlg, SW_SHOW);
-                        UpdateWindow(hdlg);
+
+                        ShowWindow(hwndaccount, SW_SHOW);
+                        UpdateWindow(hwndaccount);
 
                     }
                     break;
@@ -259,7 +344,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                     ListView_SetItemCount(hlist, MAX_POSTS);
                 }
-
             }
             return 0;
         }
@@ -293,37 +377,44 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
     return DefWindowProc(hwnd, message, wparam, lparam);
 }
 
-INT_PTR CALLBACK InstanceDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam) {
+LRESULT CALLBACK InstanceWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
     switch(message) {
-        case WM_COMMAND:
-            switch(LOWORD(wparam)) {
-                case IDB_CONTINUE_I: {
-                    //FIXME: need a better check for url; like a regex in Java or something
-                    if (GetDlgItemText(hdlg, IDE_INSTANCE_I, serverAddress, sizeof(serverAddress)) > 0) {
-                        EndDialog(hdlg, IDB_CONTINUE_I); 
-                    } else {
-                        MessageBox(hdlg, L"Deve introduzir um endereço válido.", L"Erro", MB_ICONERROR | MB_OK);
-                    }
+        case WM_CREATE: {
+            instanceWindow(hwnd);
 
-                    return TRUE;
-                }    
+            return 0;
+        }
+
+        case WM_COMMAND:
+            switch (LOWORD(wparam)) {
+                case IDB_CONTINUE_I: {
+                    int len = GetWindowText(hinstance_edit, serverAddress, sizeof(serverAddress)/sizeof(WCHAR));
+                    if (len == 0) {
+                        MessageBox(hwnd, L"Deve introduzir um endereço válido.",
+                                L"Erro", MB_ICONERROR | MB_OK);
+                    } else {
+                        saveSettings();
+                        DestroyWindow(hwnd);
+                    }
+                }
+                break;
             }
             break;
 
         case WM_PAINT: {
-            HDC hdc = BeginPaint(hdlg, &ps);
+            HDC hdc = BeginPaint(hwnd, &ps);
             FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_3DFACE+1));
-            EndPaint(hdlg, &ps);
+            EndPaint(hwnd, &ps);
             return 0;
         }
 
         case WM_CLOSE:
         case WM_DESTROY: 
-            EndDialog(hdlg, IDB_CONTINUE_I); 
+ 
             return TRUE;
     }
 
-    return TRUE;
+    return DefWindowProc(hwnd, message, wparam, lparam);
 }
 
 INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam) {
@@ -357,11 +448,14 @@ INT_PTR CALLBACK CodeDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM l
     return TRUE;
 }
 
-INT_PTR CALLBACK AccountDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARAM lparam) {
+LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
     switch(message) {
         HBITMAP hbmpbanner;
-        case WM_INITDIALOG: {
-            //accessPublicAccount(serverAddress, L"114582230083967571");
+        case WM_CREATE: {
+            accountWindow(hwnd);
+        }
+
+        case WM_SHOWWINDOW: {
             getImage(account.avatarUrl);
 
             avatar.pixels = stbi_load_from_memory(
@@ -380,23 +474,16 @@ INT_PTR CALLBACK AccountDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARA
             hbmpbanner = CreateHbitmapFromPixels(banner.pixels, banner.width, banner.height, 515, 100);
 
             if (hbmpavatar) {
-                HWND havatar = GetDlgItem(hdlg, IDP_AVATAR_A);
-                SendMessage(havatar, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
+                SendMessage(havatar_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
             } else {
                 MessageBox(NULL, L"Avatar cannot be shown", L"Error", MB_ICONERROR);
             }
             
             if (hbmpbanner) {
-                HWND hbanner = GetDlgItem(hdlg, IDP_BANNER_A);
-                SendMessage(hbanner, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpbanner);
+                SendMessage(hbanner_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpbanner);
             } else {
                 MessageBox(NULL, L"Banner cannot be shown", L"Error", MB_ICONERROR);
             }
-
-            HWND hname = GetDlgItem(hdlg, IDS_NAME_A);
-            HWND hfollowing = GetDlgItem(hdlg, IDS_FOLLOWING_A);
-            HWND hfollowers = GetDlgItem(hdlg, IDS_FOLLOWERS_A);
-            HWND hnote = GetDlgItem(hdlg, IDS_NOTE_A);
 
             wchar_t following[32];
             swprintf(following, sizeof(following), L"Following: %d", account.followingNumber);
@@ -404,41 +491,37 @@ INT_PTR CALLBACK AccountDialogProc(HWND hdlg, UINT message, WPARAM wparam, LPARA
             wchar_t followers[32];
             swprintf(followers, sizeof(followers), L"Followers: %d", account.followersNumber);
 
-            SendMessage(hname, WM_SETTEXT, 0, (LPARAM)account.displayName);
-            SendMessage(hfollowing, WM_SETTEXT, 0, (LPARAM)following);
-            SendMessage(hfollowers, WM_SETTEXT, 0, (LPARAM)followers);
-            SendMessage(hnote, WM_SETTEXT, 0, (LPARAM)account.note);
-
-
+            SendMessage(hname_static, WM_SETTEXT, 0, (LPARAM)account.displayName);
+            SendMessage(hfollowing_static, WM_SETTEXT, 0, (LPARAM)following);
+            SendMessage(hfollowers_static, WM_SETTEXT, 0, (LPARAM)followers);
+            SendMessage(hnote_static, WM_SETTEXT, 0, (LPARAM)account.note);
         }
 
         case WM_COMMAND:
             switch(wparam) {
                 case IDB_OK_A: {
-                    EndDialog(hdlg, IDB_OK_A);
+                    ShowWindow(hwndaccount, SW_HIDE);
                     return TRUE;
                 }    
             }
             break;
 
         
-
-
         case WM_PAINT: {
-            HDC hdc = BeginPaint(hdlg, &ps);
-            FillRect(hdc, &ps.rcPaint, (HBRUSH) ((GetSysColor(COLOR_WINDOW)+1)));
-            EndPaint(hdlg, &ps);
+            HDC hdc = BeginPaint(hwnd, &ps);
+            FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_3DFACE+1));
+            EndPaint(hwnd, &ps);
         
             return 0;
         }
 
         case WM_CLOSE:
         case WM_DESTROY: 
-            EndDialog(hdlg, IDB_OK_A); 
-            return TRUE;
+            
+            return 0;
     }
 
-    return TRUE;
+    return DefWindowProc(hwnd, message, wparam, lparam);
 }
 
 // old code from another project; might verify Windows version or not

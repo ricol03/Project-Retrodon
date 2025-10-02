@@ -14,7 +14,7 @@ wchar_t port[6];
 
 wchar_t lang[5];
 
-wchar_t appdata[128];
+wchar_t appdata[128], filepath[128];
 
 void createDirectory() {
     if (wmajorversion == 5) {
@@ -139,26 +139,33 @@ wchar_t * createImagePath(wchar_t * showid, wchar_t * fileextension) {
 }
 
 void readyingFile() {
-    fr = fopen(SETTINGSFILENAME, "r");
+    fr = _wfopen(SETTINGSFILENAME, L"r");
     //fw = fopen(SETTINGSFILENAME, "w");
 }
 
 int readSettings() {
-    fr = fopen(SETTINGSFILENAME, "r+b");
+    swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
+    fr = _wfopen(filepath, L"r+b");
+
+    wchar_t * buffer = malloc(MAX_STR);
 
     if (fr != NULL) {
-        fread(serverAddress, _countof(serverAddress), 1, fr);
+        int bytesread = fread(buffer, sizeof(wchar_t), MAX_STR - 1, fr);
+        buffer[bytesread] = '\0';
+        wcscpy(serverAddress, buffer);
         return 1;
     } else {
         MessageBox(NULL, L"Settings not found", L"Error", MB_ICONERROR);
     } 
 
+    free(buffer);
     fclose(fr);
     return 0;
 }
 
 int saveSettings() {
-    fw = fopen(SETTINGSFILENAME, "wb");
+    swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
+    fw = _wfopen(filepath, L"wb");
     
     if (serverAddress != NULL)
         fwrite(serverAddress, _countof(serverAddress), 1, fw);

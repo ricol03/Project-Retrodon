@@ -6,5 +6,7 @@
 #define CONTROLS_H_
 
 int homeWindow(HWND hwnd);
+int instanceWindow(HWND hwnd);
+int accountWindow(HWND hwnd);
 
 #endif
