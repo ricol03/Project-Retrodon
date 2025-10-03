@@ -8,6 +8,9 @@ extern size_t stringsize;
 extern DWORD wversion, wmajorversion, wminorversion, wbuild;
 
 extern wchar_t serverAddress[128];
+extern char * client_id;  
+extern char * client_secret;
+
 wchar_t provider[32];
 wchar_t protocol[6];
 wchar_t port[6];
@@ -171,6 +174,18 @@ int saveSettings() {
         fwrite(serverAddress, _countof(serverAddress), 1, fw);
     
     printf("\n%ls", serverAddress);
+
+    fclose(fw);
+}
+
+int saveSecrets() {
+    swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
+    fw = _wfopen(filepath, L"a+b");
+    
+    if (client_id != NULL && client_secret != NULL) {
+        fwrite(client_id, sizeof(client_id), 1, fw);
+        fwrite(client_secret, sizeof(client_secret), 1, fw);
+    }
 
     fclose(fw);
 }

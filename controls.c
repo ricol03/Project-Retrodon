@@ -10,9 +10,70 @@ extern HWND hstatus;
 
 extern HWND hinstance_edit, hinstance_title, hinstance_subtitle, hinstance_button;
 
-extern HWND hfollow_button, hfollowing_static, hfollowers_static, hname_static, hnote_static, havatar_area, hbanner_area, hok_button;
+HWND hfollow_button, hfollowing_static, hfollowers_static, hdisplayname_static, hname_static, hnote_static, havatar_area, hbanner_area, hok_button;
+
+// code controls
+// 0 - static text
+// 1 - edit control
+// 2 - cancel button
+// 3 - continue button
+HWND hcodeControls[12];
+
+//fonts
+//0 - title font
+//1 - text font
+//2 - account title font
+HFONT hfont[3];
+
 
 HINSTANCE hinstance;
+
+int createFonts() {
+    hfont[0] = CreateFont(
+        32,
+        0,
+        0,
+        0,
+        FW_BOLD,
+        0, 0, 0, 
+        DEFAULT_CHARSET, 
+        OUT_DEFAULT_PRECIS, 
+        CLIP_DEFAULT_PRECIS, 
+        ANTIALIASED_QUALITY, 
+        FF_DONTCARE,
+        TEXT("Arial")
+    );
+
+    hfont[1] = CreateFont(
+        9,
+        0,
+        0,
+        0,
+        FW_NORMAL,
+        0, 0, 0, 
+        DEFAULT_CHARSET, 
+        OUT_DEFAULT_PRECIS, 
+        CLIP_DEFAULT_PRECIS, 
+        ANTIALIASED_QUALITY, 
+        FF_DONTCARE,
+        TEXT("Arial")
+    );
+
+    hfont[2] = CreateFont(
+        18,
+        0,
+        0,
+        0,
+        FW_BOLD,
+        0, 0, 0, 
+        DEFAULT_CHARSET, 
+        OUT_DEFAULT_PRECIS, 
+        CLIP_DEFAULT_PRECIS, 
+        ANTIALIASED_QUALITY, 
+        FF_DONTCARE,
+        TEXT("Arial")
+    );
+}
 
 int homeWindow(HWND hwnd) {
     //destroyVisibleChildWindows(hwnd);
@@ -201,7 +262,7 @@ int accountWindow(HWND hwnd) {
         WC_STATIC,
         L"Following: ",
         WS_VISIBLE | WS_CHILD,
-        175, 165, 120, 18,
+        175, 175, 120, 18,
         hwnd,
         (HMENU) IDS_FOLLOWING_A,
         GetModuleHandle(NULL),
@@ -212,18 +273,30 @@ int accountWindow(HWND hwnd) {
         WC_STATIC,
         L"Followers: ",
         WS_VISIBLE | WS_CHILD,
-        315, 165, 120, 18,
+        315, 175, 120, 18,
         hwnd,
         (HMENU) IDS_FOLLOWERS_A,
         GetModuleHandle(NULL),
         NULL
     );
 
+    hdisplayname_static = CreateWindow(
+        WC_STATIC,
+        L"name",
+        WS_VISIBLE | WS_CHILD,
+        175, 125, 145, 18,
+        hwnd,
+        (HMENU) IDS_NAME_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+
     hname_static = CreateWindow(
         WC_STATIC,
-        L"Followers: ",
+        L"name",
         WS_VISIBLE | WS_CHILD,
-        175, 135, 140, 18,
+        175, 155, 145, 18,
         hwnd,
         (HMENU) IDS_NAME_A,
         GetModuleHandle(NULL),
@@ -231,23 +304,12 @@ int accountWindow(HWND hwnd) {
     );
 
     hnote_static = CreateWindow(
-        WC_STATIC,
+        WC_EDIT,
         L"note",
-        WS_VISIBLE | WS_CHILD,
-        40, 210, 420, 100,
+        WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+        40, 200, 530, 125,
         hwnd,
         (HMENU) IDS_NOTE_A,
-        GetModuleHandle(NULL),
-        NULL
-    );
-
-    havatar_area = CreateWindow(
-        WC_STATIC,
-        L"",
-        SS_BITMAP | SS_OWNERDRAW | WS_VISIBLE | WS_CHILD,
-        40, 75, 128, 128,
-        hwnd,
-        (HMENU) IDP_AVATAR_A,
         GetModuleHandle(NULL),
         NULL
     );
@@ -255,10 +317,21 @@ int accountWindow(HWND hwnd) {
     hbanner_area = CreateWindow(
         WC_STATIC,
         L"",
-        SS_BITMAP | SS_OWNERDRAW | WS_VISIBLE | WS_CHILD,
-        2, 2, 570, 125,
+        SS_BITMAP | WS_VISIBLE | WS_CHILD,
+        0, 0, 590, 110,
         hwnd,
         (HMENU) IDP_BANNER_A,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    havatar_area = CreateWindow(
+        WC_STATIC,
+        L"",
+        SS_BITMAP | WS_VISIBLE | WS_CHILD,
+        40, 75, 112, 112,
+        hwnd,
+        (HMENU) IDP_AVATAR_A,
         GetModuleHandle(NULL),
         NULL
     );
@@ -267,12 +340,66 @@ int accountWindow(HWND hwnd) {
         WC_BUTTON,
         L"OK",
         WS_VISIBLE | WS_CHILD,
-        490, 300, 80, 30,
+        490, 335, 80, 30,
         hwnd,
         (HMENU) IDB_OK_A,
         GetModuleHandle(NULL),
         NULL
     );
 
+    SendMessage(hdisplayname_static, WM_SETFONT, (WPARAM)hfont[2], TRUE);
+    SendMessage(hok_button, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hfollow_button, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hfollowers_static, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hfollowing_static, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hname_static, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hnote_static, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+
+}
+
+int codeWindow(HWND hwnd) {
+    hcodeControls[0] = CreateWindow(
+        WC_STATIC,
+        L"Enter the authorization code received in the browser below:",
+        WS_VISIBLE | WS_CHILD,
+        20, 20, 260, 20,
+        hwnd,
+        (HMENU) 0,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hcodeControls[1] = CreateWindow(
+        WC_EDIT,
+        NULL,
+        WS_VISIBLE | WS_CHILD,
+        20, 50, 260, 20,
+        hwnd,
+        (HMENU) IDE_INSTANCE_C,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hcodeControls[2] = CreateWindow(
+        WC_BUTTON,
+        L"Cancel",
+        WS_VISIBLE | WS_CHILD,
+        260, 50, 60, 20,
+        hwnd,
+        (HMENU) IDB_CANCEL_C,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hcodeControls[3] = CreateWindow(
+        WC_BUTTON,
+        L"Continue",
+        WS_VISIBLE | WS_CHILD,
+        340, 50, 60, 20,
+        hwnd,
+        (HMENU) IDB_CONTINUE_C,
+        GetModuleHandle(NULL),
+        NULL
+    );
 }
 

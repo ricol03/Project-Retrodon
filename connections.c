@@ -12,8 +12,8 @@ Memory chunk3 = {0};
 Memory data = {0};
 Memory imageData = {0};
 
-char * client_id;  
-char * client_secret;
+wchar_t client_id[128];  
+wchar_t client_secret[128];
 char token[512];
 
 wchar_t finallink[2048];
@@ -21,6 +21,8 @@ extern wchar_t authorizationCode[128];
 
 Post posts[MAX_POSTS];
 Account account;
+
+extern HWND hwindow[4];
 
 extern PAINTSTRUCT ps;
 
@@ -54,7 +56,10 @@ void resetAccount(Account * account) {
 
 //FIXME: need to fix the incorrect links that are created
 void createEndpoint(wchar_t * server, wchar_t * endpoint, wchar_t * argument) {
-    swprintf(finallink, _countof(finallink), L"https://%ls%ls%ls", server, endpoint, argument);
+    if (argument == NULL)
+        swprintf(finallink, _countof(finallink), L"https://%ls%ls", server, endpoint);
+    else
+        swprintf(finallink, _countof(finallink), L"https://%ls%ls%ls", server, endpoint, argument);
     MessageBox(NULL, finallink, L"Info", MB_ICONINFORMATION);
 }
 
@@ -78,15 +83,11 @@ void getImage(wchar_t * link) {
         } else
             curl_easy_cleanup(curl);
     }
-
-    curl_global_cleanup();
 }
 
 /* public connections */
 
 int accessPublicTimeline(wchar_t * server) {
-    curl_global_init(CURL_GLOBAL_ALL);
-
     CURL * curl = curl_easy_init();
 
     if (curl) {
@@ -96,6 +97,7 @@ int accessPublicTimeline(wchar_t * server) {
         createEndpoint(server, L"/api/v1/timelines/public", L"?limit=64");
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
@@ -120,7 +122,7 @@ int accessPublicTimeline(wchar_t * server) {
                     return -1;
                 }
 
-                cJSON *item = NULL;
+                cJSON * item = NULL;
                 size_t i = 0;
 
                 cJSON_ArrayForEach(item, root) {
@@ -170,13 +172,12 @@ int accessPublicTimeline(wchar_t * server) {
         curl_easy_cleanup(curl);
     }
 
-    curl_global_cleanup();
-    
+    //resetMemory(&data);
+
     return 0;
 }
 
 int accessPublicAccount(wchar_t * server, wchar_t * id) {
-    curl_global_init(CURL_GLOBAL_ALL);
 
     CURL * curl = curl_easy_init();
 
@@ -197,10 +198,6 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
             MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
-            //MessageBox(NULL, client_id->valuestring, "Info", MB_ICONINFORMATION | MB_OK);
-
-            //printf("\n\n(TOKEN) Server response:\n%s\n", chunk2.response);
-
             cJSON *json = cJSON_Parse(chunk2.response);
             if (json) {
                 cJSON * id = cJSON_GetObjectItemCaseSensitive(json, "id");
@@ -218,7 +215,6 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
                 cJSON * followers = cJSON_GetObjectItemCaseSensitive(json, "followers_count");
 
                 wcscpy(account.id, charToWchar(id->valuestring));
-
                 wcscpy(account.username, charToWchar(username->valuestring));
                 wcscpy(account.displayName, charToWchar(display_name->valuestring));
                 wcscpy(account.createdAt, charToWchar(created_at->valuestring));
@@ -227,15 +223,11 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
                 wcscpy(account.bannerUrl, charToWchar(banner_url->valuestring));
                 account.followingNumber = following->valueint;
                 account.followersNumber = followers->valueint;
-
-                cJSON_Delete(json);
             }
         }            
         
         curl_easy_cleanup(curl);
     }
-
-    curl_global_cleanup();
 
     return 0;
 }
@@ -247,13 +239,11 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
 }*/
 
 int createApplication(wchar_t * server) {
-    /*curl_global_init(CURL_GLOBAL_ALL);
-
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, L"/api/v1/apps");
-        curl_easy_setopt(curl, CURLOPT_URL, finallink);
+        createEndpoint(server, L"/api/v1/apps", NULL);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 
         curl_mime * mime = curl_mime_init(curl);
@@ -279,20 +269,20 @@ int createApplication(wchar_t * server) {
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, "Instance's info could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+            MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
-            MessageBox(NULL, "Instance's info was retrieved", "Info", MB_ICONINFORMATION | MB_OK);
+            MessageBox(NULL, L"Instance's info was retrieved", L"Info", MB_ICONINFORMATION | MB_OK);
             
             cJSON * json = cJSON_Parse(chunk.response);
 
             if (json == NULL) {
-                MessageBox(NULL, "JSON is empty", "Error", MB_ICONERROR);
+                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
             } else {
                 cJSON * id = cJSON_GetObjectItemCaseSensitive(json, "client_id");
                 cJSON * secret = cJSON_GetObjectItemCaseSensitive(json, "client_secret");
 
-                client_id = id->valuestring;
-                client_secret = secret->valuestring;
+                wcscpy(client_id, charToWchar(id->valuestring));
+                wcscpy(client_secret, charToWchar(secret->valuestring));
 
                 MessageBox(NULL, client_secret, client_id, MB_ICONINFORMATION);
 
@@ -303,23 +293,21 @@ int createApplication(wchar_t * server) {
         curl_easy_cleanup(curl);
     }
 
-    curl_global_cleanup();*/
-
     // instances usually rate limit the creation of these; manually add them here for now
-    client_id = "ID_HERE";
-    client_secret = "SECRET_HERE";
+    //client_id = "ID_HERE";
+    //client_secret = "SECRET_HERE";
+
+    //saveSecrets();
 
     return 0;
 }   
 
 int getAccessToken(wchar_t * server) {
-    curl_global_init(CURL_GLOBAL_ALL);
-
     CURL * curl = curl_easy_init();
 
     if (curl) {
         createEndpoint(server, L"/oauth/token", NULL);
-        curl_easy_setopt(curl, CURLOPT_URL, finallink);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -328,11 +316,11 @@ int getAccessToken(wchar_t * server) {
 
         curl_mimepart * part = curl_mime_addpart(mime);
         curl_mime_name(part, "client_id");
-        curl_mime_data(part, client_id, CURL_ZERO_TERMINATED);
+        curl_mime_data(part, wcharToChar(client_id), CURL_ZERO_TERMINATED);
 
         part = curl_mime_addpart(mime);
         curl_mime_name(part, "client_secret");
-        curl_mime_data(part, client_secret, CURL_ZERO_TERMINATED);
+        curl_mime_data(part, wcharToChar(client_secret), CURL_ZERO_TERMINATED);
 
         part = curl_mime_addpart(mime);
         curl_mime_name(part, "grant_type");
@@ -372,19 +360,15 @@ int getAccessToken(wchar_t * server) {
         curl_easy_cleanup(curl);
     }
 
-    curl_global_cleanup();
-
     return 0;
 }
 
 int verifyCredentials(wchar_t * server) {
-    curl_global_init(CURL_GLOBAL_ALL);
-
     CURL * curl = curl_easy_init();
 
     if (curl) {
         createEndpoint(server, L"/api/v1/apps/verify_credentials", NULL);
-        curl_easy_setopt(curl, CURLOPT_URL, finallink);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         
@@ -414,44 +398,51 @@ int verifyCredentials(wchar_t * server) {
         curl_easy_cleanup(curl);
     }
 
-    curl_global_cleanup();
-
     return 0;
 }
 
 int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
 
-    MessageBox(NULL, server, L"Info", MB_ICONASTERISK);
-
     wchar_t auth_url[512];
     swprintf(auth_url, sizeof(auth_url),
-        L"https://%s/oauth/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=read+write+push",
+        L"https://%ls/oauth/authorize?response_type=code&client_id=%ls&redirect_uri=%s&scope=read+write+push",
         server, client_id, "urn:ietf:wg:oauth:2.0:oob");
     ShellExecute(NULL, L"open", auth_url, NULL, NULL, SW_SHOWNORMAL);
 
-    int result = showCodeDialog(hinstance);
+    ShowWindow(hwindow[4], SW_SHOW);
+    UpdateWindow(hwindow[4]);
 
-    if (result == IDB_CONTINUE_C) {
-        MessageBox(NULL, authorizationCode, L"Info", MB_ICONEXCLAMATION);
-        return 0;
-    } else
-        MessageBox(NULL, L"erro", L"erro", MB_ICONERROR);
+    MSG msg;
+    BOOL running = TRUE;
+    int result = 0;
+
+    while (running && GetMessage(&msg, NULL, 0, 0)) {
+        if (!IsDialogMessage(hwindow[4], &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
         
-    return -1;
-
+    if (authorizationCode != NULL) {
+        MessageBox(NULL, L"Code found", L"Info", MB_OK);
+        return 1;
+    } else {
+        MessageBox(NULL, L"Code not found", L"Error", MB_OK);
+        return 0;
+    }
+    
 }
 
 /* login */
 
 
-/*int getUserToken(char * server) {
-    curl_global_init(CURL_GLOBAL_ALL);
-
+int getUserToken(wchar_t * server) {
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        createEndpoint(server, "/oauth/token");
-        curl_easy_setopt(curl, CURLOPT_URL, finallink);
+        resetMemory(&chunk2);
+        createEndpoint(server, L"/oauth/token", NULL);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -460,11 +451,11 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
 
         curl_mimepart * part = curl_mime_addpart(mime);
         curl_mime_name(part, "client_id");
-        curl_mime_data(part, client_id, CURL_ZERO_TERMINATED);
+        curl_mime_data(part, wcharToChar(client_id), CURL_ZERO_TERMINATED);
 
         part = curl_mime_addpart(mime);
         curl_mime_name(part, "client_secret");
-        curl_mime_data(part, client_secret, CURL_ZERO_TERMINATED);
+        curl_mime_data(part, wcharToChar(client_secret), CURL_ZERO_TERMINATED);
 
         part = curl_mime_addpart(mime);
         curl_mime_name(part, "grant_type");
@@ -476,7 +467,7 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
 
         part = curl_mime_addpart(mime);
         curl_mime_name(part, "code");
-        curl_mime_data(part, authorizationCode, CURL_ZERO_TERMINATED);
+        curl_mime_data(part, wcharToChar(authorizationCode), CURL_ZERO_TERMINATED);
 
         curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
 
@@ -487,7 +478,7 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, "Instance's info could not be retrieved", "Error", MB_ICONERROR | MB_RETRYCANCEL);
+            MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
             //MessageBox(NULL, client_id->valuestring, "Info", MB_ICONINFORMATION | MB_OK);
 
@@ -497,7 +488,7 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
             if (json) {
                 cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
                 if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
-                    MessageBox(NULL, "Deu token", "Aviso", MB_ICONEXCLAMATION);
+                    MessageBox(NULL, L"Deu token", L"Aviso", MB_ICONEXCLAMATION);
                     printf("Access token: %s\n", access_token->valuestring);
                     strcpy(token, access_token->valuestring);
                 } else {
@@ -512,9 +503,7 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
         curl_easy_cleanup(curl);
     }
 
-    curl_global_cleanup();
-
     return 0;
-}*/
+}
 
 

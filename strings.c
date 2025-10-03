@@ -24,6 +24,8 @@ char * removeHtml(const char * src) {
     //point *dest back to the start of the string
     dest = point_start;
 
+    //free(point_start);
+
     return dest;
 }
 
@@ -38,6 +40,9 @@ char * removeLetters(char * src) {
     else
         snprintf(final, MAX_STR, "%s", "(date unavailable)"); 
 
+    free(first);
+    free(second);
+
     return final;
 }
 
@@ -50,7 +55,7 @@ wchar_t * charToWchar(const char *src) {
 char * wcharToChar(const wchar_t *src) {
     int size_needed = WideCharToMultiByte(CP_UTF8, 0, src, -1, NULL, 0, NULL, NULL);
 
-    char *dest = malloc(size_needed);
+    char * dest = malloc(size_needed);
     if (!dest) return NULL;
 
     WideCharToMultiByte(CP_UTF8, 0, src, -1, dest, size_needed, NULL, NULL);

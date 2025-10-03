@@ -49,4 +49,7 @@ int getAccessToken(wchar_t * server);
 int verifyCredentials(wchar_t * server);
 int authorizeUser(wchar_t * server, HINSTANCE hinstance);
 
+int getUserToken(wchar_t * server);
+
+
 #endif

@@ -10,5 +10,6 @@ wchar_t * createImagePath(wchar_t * showid, wchar_t * fileextension);
 void readyingFile();
 int readSettings();
 int saveSettings();
+int saveSecrets();
 
 #endif
