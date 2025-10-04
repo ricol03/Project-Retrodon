@@ -183,8 +183,14 @@ int saveSecrets() {
     fw = _wfopen(filepath, L"a+b");
     
     if (client_id != NULL && client_secret != NULL) {
-        fwrite(client_id, sizeof(client_id), 1, fw);
-        fwrite(client_secret, sizeof(client_secret), 1, fw);
+        wchar_t * test;
+        wchar_t * test2;
+        //wcscpy(test, client_id);
+        
+        swprintf(test, _countof(test), L"\n%s", client_id);
+        swprintf(test2, _countof(test2), L"\n%s", client_secret);
+        fwrite(test, sizeof(test), 1, fw);
+        fwrite(test2, sizeof(test2), 1, fw);
     }
 
     fclose(fw);

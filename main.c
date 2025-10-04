@@ -2,9 +2,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "headers/stb_image.h"
 
-//TODO: fazer compilação i686
-
-//TODO: resolver o leak de ram
+//TODO: do i686 compilation
+//TODO: solve ram leak
 
 const LPCWSTR MAIN_CLASS           = L"MainWndClass";
 const LPCWSTR INSTANCE_CLASS       = L"InstanceWndClass";
@@ -49,7 +48,10 @@ extern wchar_t finallink[2048];
 Image avatar;
 Image banner;
 
-extern char token[512];
+extern char public_token[512];
+
+extern BOOL runningCodeDialog;
+
 
 
 //TODO: could do a separate file for dialog windows 
@@ -390,21 +392,23 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
             switch (LOWORD(wparam)) {
                 case IDB_LOGIN: {
                     if (!createApplication(serverAddress)) {
-                        if (!getAccessToken(serverAddress)) {
-                            if (!verifyCredentials(serverAddress)) {
+                        //if (!getAccessToken(serverAddress)) {
+                            //if (!verifyCredentials(serverAddress)) {
                                 if (!authorizeUser(serverAddress, (HINSTANCE)GetWindowLongPtr(hwindow[0], GWLP_HINSTANCE))) {
-                                    if (!getUserToken(serverAddress))
-                                        MessageBox(hwindow[0], charToWchar(token), L"deu", MB_ICONASTERISK);
+                                    if (!getUserToken(serverAddress)) {
+                                        MessageBox(hwindow[0], charToWchar(public_token), L"Token", MB_ICONASTERISK);
                                     
-                                    
+                                    } else
+                                        MessageBox(hwindow[0], L"Could not get user token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
+
                                 } else
                                     MessageBox(hwindow[0], L"Could not authorize user!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
 
-                            } else
-                                MessageBox(hwindow[0], L"Could not verify credentials!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
+                            //} else
+                            //    MessageBox(hwindow[0], L"Could not verify credentials!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
 
-                        } else 
-                            MessageBox(hwindow[0], L"Could not get access token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
+                        //} else 
+                           // MessageBox(hwindow[0], L"Could not get access token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
 
                     } else
                         MessageBox(hwindow[0], L"Could not create application!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
@@ -591,14 +595,13 @@ LRESULT CALLBACK CodeWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
                     wchar_t text[128];
                     GetWindowText(hcodeControls[1], text, _countof(text)); 
 
-                    if (text != NULL) {
+                    if (text != NULL)
                         wcscpy(authorizationCode, text);
-                    }
-
+                    
                     MessageBox(NULL, authorizationCode, L"test", MB_OK);
                     
                     ShowWindow(hwnd, SW_HIDE);
-                    PostQuitMessage(0);
+                    runningCodeDialog = FALSE;
                     return TRUE;
                 }    
             }

@@ -14,7 +14,8 @@ Memory imageData = {0};
 
 wchar_t client_id[128];  
 wchar_t client_secret[128];
-char token[512];
+char public_token[512];
+char user_token[512];
 
 wchar_t finallink[2048];
 extern wchar_t authorizationCode[128];
@@ -25,6 +26,8 @@ Account account;
 extern HWND hwindow[4];
 
 extern PAINTSTRUCT ps;
+
+BOOL runningCodeDialog = TRUE;
 
 
 static size_t WriteCallback(void * contents, size_t size, size_t nmemb, void * userp) {
@@ -54,7 +57,6 @@ void resetAccount(Account * account) {
     memset(account, 0, sizeof(* account));
 }
 
-//FIXME: need to fix the incorrect links that are created
 void createEndpoint(wchar_t * server, wchar_t * endpoint, wchar_t * argument) {
     if (argument == NULL)
         swprintf(finallink, _countof(finallink), L"https://%ls%ls", server, endpoint);
@@ -294,8 +296,9 @@ int createApplication(wchar_t * server) {
     }
 
     // instances usually rate limit the creation of these; manually add them here for now
-    //client_id = "ID_HERE";
-    //client_secret = "SECRET_HERE";
+    //Test1
+    //wcscpy(client_id, L"i6bv-kgK1Q4rLbWF9FbomTphqq3hhDlgHZ2B-vNeCyY");
+    //wcscpy(client_secret, L"hHfxooN2tdqOovDfRJQHkzJfjA8IeFCtFXyFusuo61I");
 
     //saveSecrets();
 
@@ -349,7 +352,7 @@ int getAccessToken(wchar_t * server) {
                 if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
                     MessageBox(NULL, L"Deu token", L"Aviso", MB_ICONEXCLAMATION);
                     printf("Access token: %s\n", access_token->valuestring);
-                    strcpy(token, access_token->valuestring);
+                    strcpy(public_token, access_token->valuestring);
                 } else {
                     printf("No access_token in JSON\n");
                 }
@@ -374,7 +377,7 @@ int verifyCredentials(wchar_t * server) {
         
         char header_string[512];
 
-        snprintf(header_string, sizeof(header_string), "Authorization: Bearer %s", token);
+        snprintf(header_string, sizeof(header_string), "Authorization: Bearer %s", public_token);
 
         struct curl_slist *headers = NULL;
         headers = curl_slist_append(headers, header_string);
@@ -413,64 +416,52 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
     UpdateWindow(hwindow[4]);
 
     MSG msg;
-    BOOL running = TRUE;
-    int result = 0;
 
-    while (running && GetMessage(&msg, NULL, 0, 0)) {
+    while (runningCodeDialog && GetMessage(&msg, NULL, 0, 0)) {
         if (!IsDialogMessage(hwindow[4], &msg)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
     }
         
-    if (authorizationCode != NULL) {
-        MessageBox(NULL, L"Code found", L"Info", MB_OK);
-        return 1;
+    if (wcslen(authorizationCode) > 0) {
+        MessageBox(NULL, authorizationCode, L"Info", MB_OK);
+        return 0;
     } else {
         MessageBox(NULL, L"Code not found", L"Error", MB_OK);
-        return 0;
+        return 1;
     }
     
 }
 
 /* login */
 
-
 int getUserToken(wchar_t * server) {
     CURL * curl = curl_easy_init();
 
     if (curl) {
-        resetMemory(&chunk2);
         createEndpoint(server, L"/oauth/token", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-        curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
-        curl_mime * mime = curl_mime_init(curl);
+        struct curl_slist * headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-        curl_mimepart * part = curl_mime_addpart(mime);
-        curl_mime_name(part, "client_id");
-        curl_mime_data(part, wcharToChar(client_id), CURL_ZERO_TERMINATED);
+        char postfields[2048];
+        snprintf(postfields, sizeof(postfields),
+            "grant_type=authorization_code"
+            "&client_id=%s"
+            "&client_secret=%s"
+            "&redirect_uri=urn:ietf:wg:oauth:2.0:oob"
+            "&code=%s",
+            wcharToChar(client_id),
+            wcharToChar(client_secret),
+            wcharToChar(authorizationCode));
 
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "client_secret");
-        curl_mime_data(part, wcharToChar(client_secret), CURL_ZERO_TERMINATED);
-
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "grant_type");
-        curl_mime_data(part, "authorization_code", CURL_ZERO_TERMINATED);
-
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "redirect_uris");
-        curl_mime_data(part, "urn:ietf:wg:oauth:2.0:oob", CURL_ZERO_TERMINATED);
-
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "code");
-        curl_mime_data(part, wcharToChar(authorizationCode), CURL_ZERO_TERMINATED);
-
-        curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
-
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(postfields));
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk2);
 
@@ -478,32 +469,29 @@ int getUserToken(wchar_t * server) {
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
-            MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
-            //MessageBox(NULL, client_id->valuestring, "Info", MB_ICONINFORMATION | MB_OK);
-
-            printf("\n\n(TOKEN) Server response:\n%s\n", chunk2.response);
+            printf("\n(TOKEN) Server response:\n%s\n", chunk2.response);
 
             cJSON *json = cJSON_Parse(chunk2.response);
             if (json) {
                 cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
-                if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
-                    MessageBox(NULL, L"Deu token", L"Aviso", MB_ICONEXCLAMATION);
+                if (cJSON_IsString(access_token) && access_token->valuestring) {
                     printf("Access token: %s\n", access_token->valuestring);
-                    strcpy(token, access_token->valuestring);
-                } else {
-                    printf("No access_token in JSON\n");
+                    strcpy(user_token, access_token->valuestring);
                 }
                 cJSON_Delete(json);
             }
+        }
 
-
-        }            
-        
+        curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
     }
 
-    return 0;
+    if (strlen(user_token) > 0)
+        return 0;
+    else
+        return 1;
+    
 }
 
 

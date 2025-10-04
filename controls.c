@@ -45,7 +45,7 @@ int createFonts() {
     );
 
     hfont[1] = CreateFont(
-        9,
+        12,
         0,
         0,
         0,
@@ -76,10 +76,7 @@ int createFonts() {
 }
 
 int homeWindow(HWND hwnd) {
-    //destroyVisibleChildWindows(hwnd);
-
     RECT rcClient;
-
     GetWindowRect(hwnd, &rcClient);
     
     hrefresh = CreateWindow(
