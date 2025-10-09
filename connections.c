@@ -478,9 +478,9 @@ int getUserToken(wchar_t * server) {
         } else {
             printf("\n(TOKEN) Server response:\n%s\n", chunk2.response);
 
-            cJSON *json = cJSON_Parse(chunk2.response);
+            cJSON * json = cJSON_Parse(chunk2.response);
             if (json) {
-                cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
+                cJSON * access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
                 if (cJSON_IsString(access_token) && access_token->valuestring) {
                     printf("Access token: %s\n", access_token->valuestring);
                     strcpy(user_token, access_token->valuestring);

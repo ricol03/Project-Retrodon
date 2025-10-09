@@ -433,6 +433,10 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                     ListView_SetItemCount(hlist, MAX_POSTS);
                 }
+
+                case IDM_ABOUT_ABOUT: {
+                    MessageBox(hwindow[0], L"Project Retrodon: version 0.1\nAuthor: ricol03", L"About", MB_OK);
+                }
             }
             return 0;
         }
