@@ -18,7 +18,7 @@ char public_token[512];
 char user_token[512];
 
 wchar_t finallink[2048];
-extern wchar_t authorizationCode[128];
+extern wchar_t authorizationCode[256];
 
 Post posts[MAX_POSTS];
 Account account;
@@ -50,7 +50,7 @@ void resetMemory(Memory * data) {
 }
 
 void resetPosts(Post posts[]) {
-    memset(posts, 0, sizeof(posts));
+    memset(posts, 0, sizeof(Post) * MAX_POSTS);
 }
 
 void resetAccount(Account * account) {
@@ -128,7 +128,7 @@ int accessPublicTimeline(wchar_t * server) {
                 size_t i = 0;
 
                 cJSON_ArrayForEach(item, root) {
-                    if (i >= MAX_POSTS) 
+                    if (i >= MAX_POSTS)
                         break;
 
                     cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
@@ -136,7 +136,7 @@ int accessPublicTimeline(wchar_t * server) {
 
                     cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
                     cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
-
+                    
                     cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
 
                     if (created && cJSON_IsString(created)) {
@@ -163,7 +163,7 @@ int accessPublicTimeline(wchar_t * server) {
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
                     posts[i].id[MAX_STR - 1]         = '\0';
-
+                    
                     i++;
                 }
 
@@ -408,12 +408,12 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
 
     wchar_t auth_url[512];
     swprintf(auth_url, sizeof(auth_url),
-        L"https://%ls/oauth/authorize?response_type=code&client_id=%ls&redirect_uri=%s&scope=read+write+push",
-        server, client_id, "urn:ietf:wg:oauth:2.0:oob");
+        L"https://%ls/oauth/authorize?response_type=code&client_id=%ls&redirect_uri=urn:ietf:wg:oauth:2.0:oob&scope=read+write+push",
+        server, client_id);
     ShellExecute(NULL, L"open", auth_url, NULL, NULL, SW_SHOWNORMAL);
 
-    ShowWindow(hwindow[4], SW_SHOW);
-    UpdateWindow(hwindow[4]);
+    ShowWindow(hwindow[3], SW_SHOW);
+    UpdateWindow(hwindow[3]);
 
     MSG msg;
 
@@ -444,12 +444,16 @@ int getUserToken(wchar_t * server) {
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+
 
         struct curl_slist * headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
+        headers = curl_slist_append(headers, "Accept: application/json");
+        headers = curl_slist_append(headers, "User-Agent: curl/7.0");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-        char postfields[2048];
+        char postfields[4096];
         snprintf(postfields, sizeof(postfields),
             "grant_type=authorization_code"
             "&client_id=%s"
@@ -459,6 +463,8 @@ int getUserToken(wchar_t * server) {
             wcharToChar(client_id),
             wcharToChar(client_secret),
             wcharToChar(authorizationCode));
+        // Debug: print the exact POST body
+        printf("POST body: [%s]\n", postfields);
 
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(postfields));

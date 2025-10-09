@@ -40,9 +40,6 @@ char * removeLetters(char * src) {
     else
         snprintf(final, MAX_STR, "%s", "(date unavailable)"); 
 
-    free(first);
-    free(second);
-
     return final;
 }
 

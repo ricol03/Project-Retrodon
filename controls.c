@@ -77,13 +77,13 @@ int createFonts() {
 
 int homeWindow(HWND hwnd) {
     RECT rcClient;
-    GetWindowRect(hwnd, &rcClient);
+    GetClientRect(hwnd, &rcClient);
     
     hrefresh = CreateWindow(
         WC_BUTTON,
-        NULL,
+        L"Refresh",
         WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | BS_ICON | WS_VISIBLE,
-        rcClient.left + 25, rcClient.bottom - 25, 0, 0,
+        25, 25, 50, 35,
         hwnd,
         (HMENU)IDB_REFRESH,
         GetModuleHandle(NULL),
@@ -109,7 +109,7 @@ int homeWindow(HWND hwnd) {
         WC_EDIT,
         L"Search the Fediverse",
         WS_VISIBLE | WS_CHILD,
-        25, 15, 450, 35,
+        150, 15, 200, 25,
         hwnd,
         (HMENU) 10,
         GetModuleHandle(NULL),
@@ -370,7 +370,7 @@ int codeWindow(HWND hwnd) {
         WC_EDIT,
         NULL,
         WS_VISIBLE | WS_CHILD,
-        20, 50, 260, 20,
+        20, 70, 360, 20,
         hwnd,
         (HMENU) IDE_INSTANCE_C,
         GetModuleHandle(NULL),
@@ -381,7 +381,7 @@ int codeWindow(HWND hwnd) {
         WC_BUTTON,
         L"Cancel",
         WS_VISIBLE | WS_CHILD,
-        260, 50, 60, 20,
+        240, 110, 60, 20,
         hwnd,
         (HMENU) IDB_CANCEL_C,
         GetModuleHandle(NULL),
@@ -392,7 +392,7 @@ int codeWindow(HWND hwnd) {
         WC_BUTTON,
         L"Continue",
         WS_VISIBLE | WS_CHILD,
-        340, 50, 60, 20,
+        320, 110, 60, 20,
         hwnd,
         (HMENU) IDB_CONTINUE_C,
         GetModuleHandle(NULL),

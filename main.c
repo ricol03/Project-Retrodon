@@ -34,7 +34,7 @@ PAINTSTRUCT ps;
 HINSTANCE glhinstance;
 
 wchar_t serverAddress[128] = {0};
-wchar_t authorizationCode[128] = {0};
+wchar_t authorizationCode[256] = {0};
 
 DWORD wversion, wmajorversion, wminorversion, wbuild;
 
@@ -49,6 +49,7 @@ Image avatar;
 Image banner;
 
 extern char public_token[512];
+extern char user_token[512];
 
 extern BOOL runningCodeDialog;
 
@@ -203,6 +204,10 @@ int preparingApplication() {
     return 1;
 }
 
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
+    return wWinMain(hInstance, hPrevInstance, GetCommandLineW(), nShowCmd);
+}
+
 int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdline, int nshowcmd) {
 
     curl_global_init(CURL_GLOBAL_ALL);
@@ -225,7 +230,7 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
             0,
             MAIN_CLASS,
             L"Retrodon",
-            WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_ICONIC | WS_ACTIVECAPTION | WS_VISIBLE,
+            WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_ICONIC | WS_ACTIVECAPTION | WS_VISIBLE,
             CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
             NULL,
             NULL,
@@ -258,7 +263,7 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
             0,
             ACCOUNT_CLASS,
             L"Account",
-            WS_OVERLAPPEDWINDOW | WS_MAXIMIZEBOX | WS_THICKFRAME,
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
             CW_USEDEFAULT, CW_USEDEFAULT, 600, 415,
             NULL,
             NULL,
@@ -286,11 +291,11 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
 
         RegisterClass(&codewindowclass);
 
-        hwindow[4] = CreateWindowEx(
+        hwindow[3] = CreateWindowEx(
             0,
             CODE_CLASS,
             L"Code insertion",
-            WS_OVERLAPPEDWINDOW | WS_MAXIMIZEBOX | WS_THICKFRAME,
+            WS_OVERLAPPED | WS_CAPTION,
             CW_USEDEFAULT, CW_USEDEFAULT, 400, 180,
             NULL,
             NULL,
@@ -298,7 +303,7 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
             NULL
         );
         
-        if (hwindow[4] == NULL) {
+        if (hwindow[3] == NULL) {
             wchar_t error[512];
             swprintf(error, 512, L"Error: %lu", GetLastError());
             MessageBox(NULL, error, L"Error", MB_ICONERROR);
@@ -396,7 +401,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                             //if (!verifyCredentials(serverAddress)) {
                                 if (!authorizeUser(serverAddress, (HINSTANCE)GetWindowLongPtr(hwindow[0], GWLP_HINSTANCE))) {
                                     if (!getUserToken(serverAddress)) {
-                                        MessageBox(hwindow[0], charToWchar(public_token), L"Token", MB_ICONASTERISK);
+                                        MessageBox(hwindow[0], charToWchar(user_token), L"Token", MB_ICONASTERISK);
                                     
                                     } else
                                         MessageBox(hwindow[0], L"Could not get user token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);

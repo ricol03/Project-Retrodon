@@ -4,6 +4,9 @@
 #define UNICODE
 #define _UNICODE
 
+#define _WIN32_IE 0x0400
+#define _WIN32_WINNT 0x0500
+
 //#define STB_IMAGE_IMPLEMENTATION
 
 //constants
