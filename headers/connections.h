@@ -1,5 +1,4 @@
-#include "../curl/include/curl/curl.h"
-#include "../cjson/cJSON.h"
+#include "tools.h"
 
 #ifndef CONNECTIONS_H_
 #define CONNECTIONS_H_
@@ -47,7 +46,11 @@ int accessPublicAccount(wchar_t * server, wchar_t * id);
 int createApplication(wchar_t * server);
 int getAccessToken(wchar_t * server);
 int verifyCredentials(wchar_t * server);
-int authorizeUser(wchar_t * server, HINSTANCE hinstance);
+int authorizeUser(wchar_t * server);
+
+
+int loginProcedure(wchar_t * server);
+
 
 int getUserToken(wchar_t * server);
 

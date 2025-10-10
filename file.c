@@ -8,8 +8,10 @@ extern size_t stringsize;
 extern DWORD wversion, wmajorversion, wminorversion, wbuild;
 
 extern wchar_t serverAddress[128];
-extern char * client_id;  
-extern char * client_secret;
+extern wchar_t client_id[128];  
+extern wchar_t client_secret[128];
+
+extern wchar_t user_token[128];
 
 wchar_t provider[32];
 wchar_t protocol[6];
@@ -150,18 +152,23 @@ int readSettings() {
     swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
     fr = _wfopen(filepath, L"r+b");
 
-    wchar_t * buffer = malloc(MAX_STR);
-
     if (fr != NULL) {
-        int bytesread = fread(buffer, sizeof(wchar_t), MAX_STR - 1, fr);
-        buffer[bytesread] = '\0';
-        wcscpy(serverAddress, buffer);
-        return 1;
-    } else {
-        MessageBox(NULL, L"Settings not found", L"Error", MB_ICONERROR);
-    } 
+        wchar_t buffer[MAX_STR];
+        wchar_t * line;
+        int lineCount = 0;
 
-    free(buffer);
+        while (fgetws(buffer, MAX_STR, fr) != NULL) {
+            buffer[wcslen(buffer) - 1] = L'\0';
+
+            if (lineCount == 0) {
+                wcscpy(serverAddress, buffer);
+                fclose(fr);
+                return 1;
+            }
+        }
+    } else
+        MessageBox(NULL, L"Settings not found", L"Error", MB_ICONERROR);
+    
     fclose(fr);
     return 0;
 }
@@ -171,27 +178,111 @@ int saveSettings() {
     fw = _wfopen(filepath, L"wb");
     
     if (serverAddress != NULL)
-        fwrite(serverAddress, _countof(serverAddress), 1, fw);
+        fwprintf(fw, L"%ls\n", serverAddress);
     
-    printf("\n%ls", serverAddress);
-
     fclose(fw);
 }
 
 int saveSecrets() {
     swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
     fw = _wfopen(filepath, L"a+b");
-    
+
+    if (fw == NULL) {
+        MessageBox(NULL, L"Failed to open file for writing", L"Error", MB_ICONERROR);
+        return 0;
+    }
+
     if (client_id != NULL && client_secret != NULL) {
-        wchar_t * test;
-        wchar_t * test2;
-        //wcscpy(test, client_id);
-        
-        swprintf(test, _countof(test), L"\n%s", client_id);
-        swprintf(test2, _countof(test2), L"\n%s", client_secret);
-        fwrite(test, sizeof(test), 1, fw);
-        fwrite(test2, sizeof(test2), 1, fw);
+        fwprintf(fw, L"%ls\n", client_id);
+        fwprintf(fw, L"%ls\n", client_secret);
     }
 
     fclose(fw);
+    return 1;
+}
+
+int readSecrets() {
+    swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
+    fr = _wfopen(filepath, L"r+b");
+
+    if (fr == NULL) {
+        MessageBox(NULL, L"Settings file not found", L"Error", MB_ICONERROR);
+        return 0;
+    }
+
+    wchar_t buffer[MAX_STR];
+    wchar_t * line;
+    int lineCount = 0;
+
+    while (fgetws(buffer, MAX_STR, fr) != NULL) {
+        buffer[wcslen(buffer) - 1] = L'\0';
+
+        printf("%s", buffer);
+
+        if (lineCount == 1) {
+            wcscpy(client_id, buffer);
+            MessageBox(NULL, client_id, L"Info", MB_OK);
+        } else if (lineCount == 2)
+            wcscpy(client_secret, buffer);
+        
+        lineCount++;
+        if (lineCount > 2) break;
+    }
+
+    MessageBox(NULL, client_id, L"Error", MB_ICONERROR);
+    MessageBox(NULL, client_secret, L"Error", MB_ICONERROR);
+
+    if (client_id[0] == L'\0' || client_secret[0] == L'\0')
+        return 0;
+    
+    fclose(fr);
+    return 1;
+}
+
+int saveToken() {
+    swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
+    fw = _wfopen(filepath, L"a+b");
+
+    if (fw == NULL) {
+        MessageBox(NULL, L"Failed to open file for writing", L"Error", MB_ICONERROR);
+        return 0;
+    }
+
+    if (user_token != NULL)
+        fwprintf(fw, L"%ls\n", user_token);
+    
+    fclose(fw);
+    return 1;
+}
+
+int readToken() {
+    swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
+    fr = _wfopen(filepath, L"r+b");
+
+    if (fr == NULL) {
+        MessageBox(NULL, L"Settings file not found", L"Error", MB_ICONERROR);
+        return 0;
+    }
+
+    wchar_t buffer[MAX_STR];
+    wchar_t * line;
+    int lineCount = 0;
+
+    while (fgetws(buffer, MAX_STR, fr) != NULL) {
+        buffer[wcslen(buffer) - 1] = L'\0';
+
+        if (lineCount == 3)
+            wcscpy(user_token, buffer);
+
+        lineCount++;
+        if (lineCount > 3) break;
+    }
+
+    MessageBox(NULL, user_token, L"Error", MB_ICONERROR);
+
+    if (user_token[0] == L'\0')
+        return 0;
+    
+    fclose(fr);
+    return 1;
 }

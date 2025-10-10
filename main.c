@@ -5,6 +5,9 @@
 //TODO: do i686 compilation
 //TODO: solve ram leak
 
+BOOL loggedIn = FALSE;
+extern BOOL createdApplication;
+
 const LPCWSTR MAIN_CLASS           = L"MainWndClass";
 const LPCWSTR INSTANCE_CLASS       = L"InstanceWndClass";
 const LPCWSTR ACCOUNT_CLASS        = L"AccountWndClass";
@@ -17,11 +20,9 @@ const LPCWSTR CODE_CLASS           = L"CodeWndClass";
 // 3 - code dialog
 HWND hwindow[4];
 
-HWND hrefresh;
-HWND hlogin;
-HWND hsearch;
-HWND hlist;
-HWND hstatus;
+// main window controls
+
+extern HWND hmainControls[6];
 
 HWND hinstance_edit, hinstance_title, hinstance_subtitle, hinstance_button;
 
@@ -49,7 +50,7 @@ Image avatar;
 Image banner;
 
 extern char public_token[512];
-extern char user_token[512];
+extern wchar_t user_token[128];
 
 extern BOOL runningCodeDialog;
 
@@ -150,6 +151,12 @@ int preparingApplication() {
     InitCommonControlsEx(&icex);
 
     createDirectory();
+
+    if (readSecrets())
+        createdApplication = TRUE;
+
+    if (readToken())
+        loggedIn = TRUE;
 
     if (!readSettings()) {
 
@@ -340,10 +347,10 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 item.mask = LVIF_TEXT;
                 item.iItem = i;
                 item.pszText = L"Example post";
-                ListView_InsertItem(hlist, &item);
+                ListView_InsertItem(hmainControls[3], &item);
             }
 
-            ListView_SetItemCount(hlist, MAX_POSTS);
+            ListView_SetItemCount(hmainControls[3], MAX_POSTS);
 
             return 0;
         }
@@ -396,28 +403,11 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
         case WM_COMMAND: {
             switch (LOWORD(wparam)) {
                 case IDB_LOGIN: {
-                    if (!createApplication(serverAddress)) {
-                        //if (!getAccessToken(serverAddress)) {
-                            //if (!verifyCredentials(serverAddress)) {
-                                if (!authorizeUser(serverAddress, (HINSTANCE)GetWindowLongPtr(hwindow[0], GWLP_HINSTANCE))) {
-                                    if (!getUserToken(serverAddress)) {
-                                        MessageBox(hwindow[0], charToWchar(user_token), L"Token", MB_ICONASTERISK);
-                                    
-                                    } else
-                                        MessageBox(hwindow[0], L"Could not get user token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
-
-                                } else
-                                    MessageBox(hwindow[0], L"Could not authorize user!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
-
-                            //} else
-                            //    MessageBox(hwindow[0], L"Could not verify credentials!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
-
-                        //} else 
-                           // MessageBox(hwindow[0], L"Could not get access token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
-
-                    } else
-                        MessageBox(hwindow[0], L"Could not create application!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
+                    if (loginProcedure(serverAddress)) {
+                        loggedIn = TRUE;
+                    }
                 }
+                break;
 
                 case IDB_REFRESH: {
                     //TODO: this behaviour should change whether the timeline is local, public, etc.
@@ -428,15 +418,17 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                         item.mask = LVIF_TEXT;
                         item.iItem = i;
                         item.pszText = L"Example post";
-                        ListView_InsertItem(hlist, &item);
+                        ListView_InsertItem(hmainControls[3], &item);
                     }
 
-                    ListView_SetItemCount(hlist, MAX_POSTS);
+                    ListView_SetItemCount(hmainControls[3], MAX_POSTS);
                 }
+                break;
 
                 case IDM_ABOUT_ABOUT: {
                     MessageBox(hwindow[0], L"Project Retrodon: version 0.1\nAuthor: ricol03", L"About", MB_OK);
                 }
+                break;
             }
             return 0;
         }
@@ -445,13 +437,18 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
             int width = LOWORD(lparam);
             int height = HIWORD(lparam);
 
-            MoveWindow(hsearch, 15, 15, width - SMALL_BUTTON_WIDTH - 175, BUTTON_HEIGHT, TRUE);
-            MoveWindow(hrefresh, width - SMALL_BUTTON_WIDTH - 140, 15, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
-            MoveWindow(hlogin, width - 115, 15, BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
+            if (loggedIn) {
+                MoveWindow(hmainControls[0], width - 65, 15, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
+                MoveWindow(hmainControls[2], 65, 15, width - SMALL_BUTTON_WIDTH - 90, BUTTON_HEIGHT, TRUE);
+                MoveWindow(hmainControls[5], 15, 15, 32, 32, TRUE);
+            } else {
+                MoveWindow(hmainControls[0], width - SMALL_BUTTON_WIDTH - 140, 15, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
+                MoveWindow(hmainControls[1], width - 115, 15, BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
+                MoveWindow(hmainControls[2], 15, 15, width - SMALL_BUTTON_WIDTH - 175, BUTTON_HEIGHT, TRUE);
+            }
 
-            MoveWindow(hlist, 0, 65, width, height - 100, TRUE);
-
-            SendMessage(hstatus, WM_SIZE, 0, 0);
+            MoveWindow(hmainControls[3], 0, 65, width, height - 100, TRUE);
+            SendMessage(hmainControls[4], WM_SIZE, 0, 0);
         }
         
         case WM_PAINT: {

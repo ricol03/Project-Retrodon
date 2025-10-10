@@ -1,7 +1,7 @@
 #ifndef CONST_H_
 #define CONST_H_
 
-#define IDM_FILE_HOME                        10
+#define IDM_FILE_LOGOUT                      10
 #define IDM_FILE_CLOSE                       11
 
 /*-------------------------------*/
@@ -19,10 +19,6 @@
 
 /*-------------------------------*/
 
-
-
-
-
 #define IDB_LOGIN                           900
 #define IDB_REFRESH                         901
 
@@ -32,6 +28,7 @@
 #define ID_TEST 999
 
 //dialog constants
+
 #define IDD_DIALOG_INSTANCE                  50
 #define IDD_DIALOG_CODE                      51
 #define IDD_DIALOG_ACCOUNT                   52
@@ -55,8 +52,10 @@
 #define IDS_NOTE_A                           4203
 
 
-#define IDP_BANNER_A                         4300
-#define IDP_AVATAR_A                         4301
+#define IDP_AVATAR_M                         4300
+#define IDP_BANNER_A                         4301
+#define IDP_AVATAR_A                         4302
+
 
 //heights & widths
 
@@ -68,5 +67,6 @@
 //file names
 
 #define SETTINGSFILENAME L"settings.bin"
+
 
 #endif

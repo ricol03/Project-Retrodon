@@ -6,16 +6,19 @@
 //verify credentials:   https://<server>/api/v1/apps/verify_credentials
 //authorize user:       https://<server>/oauth/authorize
 
+// boolean that checks if the application was already created
+BOOL createdApplication = FALSE;
+
 Memory chunk = {0};
 Memory chunk2 = {0};
 Memory chunk3 = {0};
 Memory data = {0};
 Memory imageData = {0};
 
-wchar_t client_id[128];  
-wchar_t client_secret[128];
+wchar_t client_id[128] = {0};  
+wchar_t client_secret[128] = {0};
 char public_token[512];
-char user_token[512];
+wchar_t user_token[128] = {0};
 
 wchar_t finallink[2048];
 extern wchar_t authorizationCode[256];
@@ -62,7 +65,6 @@ void createEndpoint(wchar_t * server, wchar_t * endpoint, wchar_t * argument) {
         swprintf(finallink, _countof(finallink), L"https://%ls%ls", server, endpoint);
     else
         swprintf(finallink, _countof(finallink), L"https://%ls%ls%ls", server, endpoint, argument);
-    MessageBox(NULL, finallink, L"Info", MB_ICONINFORMATION);
 }
 
 void getImage(wchar_t * link) {
@@ -234,11 +236,7 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
     return 0;
 }
 
-/*int loginProcedure() {
-    createApplication(char * server)
-    getAccessToken(char * server)
-    verifyCredentials(char * server)
-}*/
+
 
 int createApplication(wchar_t * server) {
     CURL * curl = curl_easy_init();
@@ -295,12 +293,7 @@ int createApplication(wchar_t * server) {
         curl_easy_cleanup(curl);
     }
 
-    // instances usually rate limit the creation of these; manually add them here for now
-    //Test1
-    //wcscpy(client_id, L"i6bv-kgK1Q4rLbWF9FbomTphqq3hhDlgHZ2B-vNeCyY");
-    //wcscpy(client_secret, L"hHfxooN2tdqOovDfRJQHkzJfjA8IeFCtFXyFusuo61I");
-
-    //saveSecrets();
+    saveSecrets();
 
     return 0;
 }   
@@ -404,7 +397,7 @@ int verifyCredentials(wchar_t * server) {
     return 0;
 }
 
-int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
+int authorizeUser(wchar_t * server) {
 
     wchar_t auth_url[512];
     swprintf(auth_url, sizeof(auth_url),
@@ -436,6 +429,31 @@ int authorizeUser(wchar_t * server, HINSTANCE hinstance) {
 
 /* login */
 
+int loginProcedure(wchar_t * server) {
+
+    if (!createdApplication) {
+        if (createApplication(server)) {
+            MessageBox(hwindow[0], L"Could not create application!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
+            return 0;
+        } else
+            createdApplication = TRUE;
+    }
+
+    if (!authorizeUser(server)) {
+        if (!getUserToken(server)) {
+            saveToken();
+            MessageBox(hwindow[0], user_token, L"Token", MB_ICONASTERISK);
+            return 1;
+        
+        } else
+            MessageBox(hwindow[0], L"Could not get user token!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
+
+    } else
+        MessageBox(hwindow[0], L"Could not authorize user!\nConnection attempt cannot proceed.", L"Error", MB_ICONERROR);
+
+    return 0;
+}
+
 int getUserToken(wchar_t * server) {
     CURL * curl = curl_easy_init();
 
@@ -463,8 +481,6 @@ int getUserToken(wchar_t * server) {
             wcharToChar(client_id),
             wcharToChar(client_secret),
             wcharToChar(authorizationCode));
-        // Debug: print the exact POST body
-        printf("POST body: [%s]\n", postfields);
 
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(postfields));
@@ -483,7 +499,7 @@ int getUserToken(wchar_t * server) {
                 cJSON * access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
                 if (cJSON_IsString(access_token) && access_token->valuestring) {
                     printf("Access token: %s\n", access_token->valuestring);
-                    strcpy(user_token, access_token->valuestring);
+                    wcscpy(user_token, charToWchar(access_token->valuestring));
                 }
                 cJSON_Delete(json);
             }
@@ -493,7 +509,7 @@ int getUserToken(wchar_t * server) {
         curl_easy_cleanup(curl);
     }
 
-    if (strlen(user_token) > 0)
+    if (wcslen(user_token) > 0)
         return 0;
     else
         return 1;

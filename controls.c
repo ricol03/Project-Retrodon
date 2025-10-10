@@ -1,6 +1,17 @@
 #include "headers/tools.h"
 
+extern BOOL loggedIn;
+
 extern wchar_t serverAddress[128];
+
+// main window controls
+// 0 - refresh button
+// 1 - login button
+// 2 - search bar
+// 3 - activity list
+// 4 - status bar
+// 5 - profile button
+HWND hmainControls[6];
 
 extern HWND hrefresh;
 extern HWND hlogin;
@@ -12,7 +23,7 @@ extern HWND hinstance_edit, hinstance_title, hinstance_subtitle, hinstance_butto
 
 HWND hfollow_button, hfollowing_static, hfollowers_static, hdisplayname_static, hname_static, hnote_static, havatar_area, hbanner_area, hok_button;
 
-// code controls
+// code window controls
 // 0 - static text
 // 1 - edit control
 // 2 - cancel button
@@ -78,8 +89,32 @@ int createFonts() {
 int homeWindow(HWND hwnd) {
     RECT rcClient;
     GetClientRect(hwnd, &rcClient);
-    
-    hrefresh = CreateWindow(
+
+    if (!loggedIn) {
+        hmainControls[1] = CreateWindow(
+            WC_BUTTON,
+            TEXT("Login"),
+            WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | WS_VISIBLE,
+            rcClient.left + 25, rcClient.bottom - 25, 125, 35,
+            hwnd,
+            (HMENU)IDB_LOGIN,
+            GetModuleHandle(NULL),
+            NULL
+        );
+    } else {
+        hmainControls[5] = CreateWindow(
+            WC_STATIC,
+            L"",
+            SS_BITMAP | WS_VISIBLE | WS_CHILD,
+            25, 25, 32, 32,
+            hwnd,
+            (HMENU) IDP_AVATAR_M,
+            GetModuleHandle(NULL),
+            NULL
+        );
+    }
+
+    hmainControls[0] = CreateWindow(
         WC_BUTTON,
         L"Refresh",
         WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | BS_ICON | WS_VISIBLE,
@@ -92,23 +127,14 @@ int homeWindow(HWND hwnd) {
 
     //FIXME: example icon
     HICON hicon = LoadIcon(hinstance, IDI_WARNING);
-    SendMessage(hrefresh, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hicon);
+    SendMessage(hmainControls[0], BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hicon);
 
-    hlogin = CreateWindow(
-        WC_BUTTON,
-        TEXT("Login"),
-        WS_TABSTOP | WS_CHILD | BS_DEFPUSHBUTTON | WS_VISIBLE,
-        rcClient.left + 25, rcClient.bottom - 25, 125, 35,
-        hwnd,
-        (HMENU)IDB_LOGIN,
-        GetModuleHandle(NULL),
-        NULL
-    );
+    
 
-    hsearch = CreateWindow(
+    hmainControls[2] = CreateWindow(
         WC_EDIT,
         L"Search the Fediverse",
-        WS_VISIBLE | WS_CHILD,
+        WS_VISIBLE | WS_DISABLED | WS_CHILD,
         150, 15, 200, 25,
         hwnd,
         (HMENU) 10,
@@ -116,7 +142,7 @@ int homeWindow(HWND hwnd) {
         NULL
     );
 
-    hlist = CreateWindow(
+    hmainControls[3] = CreateWindow(
         WC_LISTVIEW, 
         L"",         
         WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA,
@@ -131,37 +157,37 @@ int homeWindow(HWND hwnd) {
     col.mask = LVCF_WIDTH | LVCF_TEXT;
     col.cx = 100;
     col.pszText = L"User";
-    ListView_InsertColumn(hlist, 0, &col);
+    ListView_InsertColumn(hmainControls[3], 0, &col);
 
     col.cx = 350;
     col.pszText = L"Content";
-    ListView_InsertColumn(hlist, 1, &col);
+    ListView_InsertColumn(hmainControls[3], 1, &col);
 
     col.cx = 150;
     col.pszText = L"Posted at";
-    ListView_InsertColumn(hlist, 2, &col);
+    ListView_InsertColumn(hmainControls[3], 2, &col);
 
     col.cx = 0;
-    ListView_InsertColumn(hlist, 3, &col);
+    ListView_InsertColumn(hmainControls[3], 3, &col);
 
-    ListView_SetIconSpacing(hlist, 100, 60);
+    ListView_SetIconSpacing(hmainControls[3], 100, 60);
 
-    hstatus = CreateWindowEx(
+    hmainControls[4] = CreateWindowEx(
         0, STATUSCLASSNAME, NULL,
         WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP,
         0, 0, 0, 0,
         hwnd, (HMENU)1, GetModuleHandle(NULL), NULL);
 
     int parts[] = {30, 200, -1};
-    SendMessage(hstatus, SB_SETPARTS, 3, (LPARAM)parts);
+    SendMessage(hmainControls[4], SB_SETPARTS, 3, (LPARAM)parts);
 
     wchar_t celltext[512];
     swprintf(celltext, sizeof(celltext), L"Instance: %ls", serverAddress);
 
     //FIXME: example icon
-    SendMessage(hstatus, SB_SETICON, 0, (LPARAM)LoadIcon(NULL, IDI_WARNING));
-    SendMessage(hstatus, SB_SETTEXT, 1, (LPARAM)charToWchar("Logged out"));
-    SendMessage(hstatus, SB_SETTEXT, 2, (LPARAM)celltext);
+    SendMessage(hmainControls[4], SB_SETICON, 0, (LPARAM)LoadIcon(NULL, IDI_WARNING));
+    SendMessage(hmainControls[4], SB_SETTEXT, 1, (LPARAM)charToWchar("Logged out"));
+    SendMessage(hmainControls[4], SB_SETTEXT, 2, (LPARAM)celltext);
 
     HMENU hmenu = CreateMenu();
     HMENU hsubmenufile        = CreatePopupMenu();
@@ -170,17 +196,28 @@ int homeWindow(HWND hwnd) {
     HMENU hsubmenusettings    = CreatePopupMenu();
     HMENU hsubmenuabout       = CreatePopupMenu();
 
+    if (loggedIn)
+        AppendMenu(hsubmenufile, MF_STRING, IDM_FILE_LOGOUT, L"Logout...");
+    else
+        AppendMenu(hsubmenufile, MF_STRING | MF_GRAYED, IDM_FILE_LOGOUT, L"Logout...");  
     AppendMenu(hsubmenufile, MF_STRING, IDM_FILE_CLOSE, L"Exit");
     
-    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 100, L"Main page");
-    AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 101, L"Local");
-    AppendMenu(hsubmenutimefile, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hsubmenutimefile, MF_STRING | MF_CHECKED, 102, L"Federation");
+    if (loggedIn) { 
+        AppendMenu(hsubmenutimefile, MF_STRING | MF_CHECKED, 100, L"Main page");
+        AppendMenu(hsubmenutimefile, MF_STRING, 101, L"Local");
+        AppendMenu(hsubmenutimefile, MF_SEPARATOR, 0, NULL);
+        AppendMenu(hsubmenutimefile, MF_STRING, 102, L"Federation");
+    } else {
+        AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 100, L"Main page");
+        AppendMenu(hsubmenutimefile, MF_STRING | MF_GRAYED, 101, L"Local");
+        AppendMenu(hsubmenutimefile, MF_SEPARATOR, 0, NULL);
+        AppendMenu(hsubmenutimefile, MF_STRING | MF_CHECKED, 102, L"Federation");
+    }
     
     AppendMenu(hsubmenusearch, MF_STRING | MF_GRAYED, IDM_SEARCH_SEARCHBOX, L"Test");
-    AppendMenu(hsubmenusettings, MF_STRING, IDM_SETTINGS_SETTINGS, L"Preferences...");
+    AppendMenu(hsubmenusettings, MF_STRING | MF_GRAYED, IDM_SETTINGS_SETTINGS, L"Preferences...");
 
-    AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_HELP, L"Help");
+    AppendMenu(hsubmenuabout, MF_STRING | MF_GRAYED, IDM_ABOUT_HELP, L"Help");
     AppendMenu(hsubmenuabout, MF_SEPARATOR, 0, NULL);
     AppendMenu(hsubmenuabout, MF_STRING, IDM_ABOUT_ABOUT, L"About");
 
@@ -192,6 +229,7 @@ int homeWindow(HWND hwnd) {
 
     SetMenu(hwnd, hmenu);
 }
+
 
 int instanceWindow(HWND hwnd) {
     hinstance_title = CreateWindow(
@@ -244,17 +282,30 @@ int instanceWindow(HWND hwnd) {
 }
 
 int accountWindow(HWND hwnd) {
-    hfollow_button = CreateWindow(
-        WC_BUTTON,
-        L"Follow",
-        WS_VISIBLE | WS_CHILD,
-        490, 145, 80, 30,
-        hwnd,
-        (HMENU) IDB_FOLLOW_A,
-        GetModuleHandle(NULL),
-        NULL
-    );
-
+    if (loggedIn) {
+        hfollow_button = CreateWindow(
+            WC_BUTTON,
+            L"Follow",
+            WS_VISIBLE | WS_CHILD,
+            490, 145, 80, 30,
+            hwnd,
+            (HMENU) IDB_FOLLOW_A,
+            GetModuleHandle(NULL),
+            NULL
+        );
+    } else {
+        hfollow_button = CreateWindow(
+            WC_BUTTON,
+            L"Follow",
+            WS_VISIBLE | WS_DISABLED | WS_CHILD,
+            490, 145, 80, 30,
+            hwnd,
+            (HMENU) IDB_FOLLOW_A,
+            GetModuleHandle(NULL),
+            NULL
+        );
+    }
+    
     hfollowing_static = CreateWindow(
         WC_STATIC,
         L"Following: ",

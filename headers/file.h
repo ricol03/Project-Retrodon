@@ -11,5 +11,8 @@ void readyingFile();
 int readSettings();
 int saveSettings();
 int saveSecrets();
+int readSecrets();
+int readToken();
+int saveToken();
 
 #endif

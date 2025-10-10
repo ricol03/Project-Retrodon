@@ -1,6 +1,4 @@
-#include <windows.h>
-#include <winuser.h>
-#include <commctrl.h>
+#include "tools.h"
 
 #ifndef CONTROLS_H_
 #define CONTROLS_H_
