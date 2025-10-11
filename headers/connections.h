@@ -3,7 +3,7 @@
 #ifndef CONNECTIONS_H_
 #define CONNECTIONS_H_
 
-#define MAX_POSTS 64
+#define MAX_POSTS 40
 #define MAX_STR 2048
 
 struct Memory {
@@ -16,6 +16,7 @@ struct Post {
     wchar_t content[MAX_STR];
     wchar_t username[MAX_STR];
     wchar_t id[MAX_STR];
+    boolean reblog;
 } typedef Post;
 
 struct Account {
@@ -50,9 +51,10 @@ int authorizeUser(wchar_t * server);
 
 
 int loginProcedure(wchar_t * server);
-
-
 int getUserToken(wchar_t * server);
 
+int getUserProfile(wchar_t * server);
+int accessUserTimeline(wchar_t * server);
+int accessLocalTimeline(wchar_t * server);
 
 #endif

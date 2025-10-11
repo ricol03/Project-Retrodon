@@ -41,6 +41,7 @@ DWORD wversion, wmajorversion, wminorversion, wbuild;
 
 extern Post posts[64];
 extern Account account;
+extern Account userAccount;
 
 extern Memory imageData;
 
@@ -53,6 +54,8 @@ extern char public_token[512];
 extern wchar_t user_token[128];
 
 extern BOOL runningCodeDialog;
+
+BOOL clickedUserProfile = FALSE;
 
 
 
@@ -177,8 +180,8 @@ int preparingApplication() {
             0,
             INSTANCE_CLASS,
             L"Instance",
-            WS_OVERLAPPEDWINDOW | WS_MAXIMIZEBOX | WS_THICKFRAME,
-            CW_USEDEFAULT, CW_USEDEFAULT, 400, 180,
+            WS_OVERLAPPED | WS_CAPTION,
+            (GetSystemMetrics(SM_CXSCREEN) / 2) - 200 , (GetSystemMetrics(SM_CYSCREEN) / 2) - 90, 400, 180,
             NULL,
             NULL,
             glhinstance,
@@ -238,7 +241,7 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
             MAIN_CLASS,
             L"Retrodon",
             WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_ICONIC | WS_ACTIVECAPTION | WS_VISIBLE,
-            CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
+            (GetSystemMetrics(SM_CXSCREEN) / 2) - 250, (GetSystemMetrics(SM_CYSCREEN) / 2) - 250, 500, 500,
             NULL,
             NULL,
             glhinstance,
@@ -271,7 +274,7 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
             ACCOUNT_CLASS,
             L"Account",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-            CW_USEDEFAULT, CW_USEDEFAULT, 600, 415,
+            (GetSystemMetrics(SM_CXSCREEN) / 2) - 300, (GetSystemMetrics(SM_CYSCREEN) / 2) - 208, 600, 415,
             NULL,
             NULL,
             glhinstance,
@@ -303,7 +306,7 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
             CODE_CLASS,
             L"Code insertion",
             WS_OVERLAPPED | WS_CAPTION,
-            CW_USEDEFAULT, CW_USEDEFAULT, 400, 180,
+            (GetSystemMetrics(SM_CXSCREEN) / 2) - 200, (GetSystemMetrics(SM_CYSCREEN) / 2) - 90, 400, 180,
             NULL,
             NULL,
             glhinstance,
@@ -338,9 +341,14 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
     
     switch (message) {
         case WM_CREATE: {
-            homeWindow(hwnd);
+            
+            if (loggedIn) {
+                getUserProfile(serverAddress);
+                accessUserTimeline(serverAddress);
+            } else
+                accessPublicTimeline(serverAddress);
 
-            accessPublicTimeline(serverAddress);
+            homeWindow(hwnd);
 
             for (int i = 0; i < MAX_POSTS; i++) {
                 LVITEM item = {0};
@@ -359,6 +367,24 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
             LPNMHDR pnmh = (LPNMHDR)lparam;
 
             switch (pnmh->code) {
+                case WM_VSCROLL: {
+
+                    int topIndex = SendMessage(hmainControls[3], LB_GETTOPINDEX, 0, 0);
+                    int visibleCount = SendMessage(hmainControls[3], LB_GETCOUNT, 0, 0);
+
+                    RECT rc;
+                    GetClientRect(hmainControls[3], &rc);
+
+                    int itemHeight = SendMessage(hmainControls[3], LB_GETITEMHEIGHT, 0, 0);
+                    int itemsVisible = (rc.bottom - rc.top) / itemHeight;
+
+                    if (topIndex + itemsVisible >= visibleCount) {
+                        printf("Reached end of list!\n");
+                    }
+
+                }
+
+
                 case NM_DBLCLK: {
                     LPNMITEMACTIVATE pia = (LPNMITEMACTIVATE)lparam;
 
@@ -387,8 +413,10 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                             if (col == 0)
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].username;
-                            else if (col == 1)
+                            else if (col == 1 && posts[plvdi->item.iItem].reblog == FALSE)
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].content;
+                            else if (col == 1 && posts[plvdi->item.iItem].reblog == TRUE)
+                                plvdi->item.pszText = (LPWSTR)L"(Reblogged post)";
                             else if (col == 2)
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].createdAt;
                             else 
@@ -402,16 +430,40 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
         case WM_COMMAND: {
             switch (LOWORD(wparam)) {
+
+                case IDP_AVATAR_M: {
+
+                    if (HIWORD(wparam) == STN_CLICKED) {
+                        clickedUserProfile = TRUE;
+                        MessageBox(hwnd, L"Picture clicked!", L"Info", MB_OK);
+                        getUserProfile(serverAddress);
+
+                        ShowWindow(hwindow[2], SW_SHOW);
+                        UpdateWindow(hwindow[2]);
+
+                        clickedUserProfile = FALSE;
+                    }
+
+                    
+                }
+                break;
+
                 case IDB_LOGIN: {
                     if (loginProcedure(serverAddress)) {
                         loggedIn = TRUE;
+                        resetHomeWindow();
+                        getUserProfile(serverAddress);
+                        accessUserTimeline(serverAddress);
+                        homeWindow(hwindow[0]);
                     }
                 }
                 break;
 
                 case IDB_REFRESH: {
-                    //TODO: this behaviour should change whether the timeline is local, public, etc.
-                    accessPublicTimeline(serverAddress);
+                    if (loggedIn)
+                        accessUserTimeline(serverAddress);
+                    else
+                        accessPublicTimeline(serverAddress);
 
                     for (int i = 0; i < MAX_POSTS; i++) {
                         LVITEM item = {0};
@@ -422,8 +474,11 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                     }
 
                     ListView_SetItemCount(hmainControls[3], MAX_POSTS);
+
                 }
                 break;
+
+                /* menus */
 
                 case IDM_ABOUT_ABOUT: {
                     MessageBox(hwindow[0], L"Project Retrodon: version 0.1\nAuthor: ricol03", L"About", MB_OK);
@@ -508,53 +563,97 @@ LRESULT CALLBACK InstanceWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPAR
 
 LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
     switch(message) {
-        HBITMAP hbmpbanner;
         case WM_CREATE: {
             accountWindow(hwnd);
             return 0;
         }
 
         case WM_SHOWWINDOW: {
-            getImage(account.avatarUrl);
+            if (clickedUserProfile) {
+                getImage(userAccount.avatarUrl);
 
-            avatar.pixels = stbi_load_from_memory(
-                imageData.response, imageData.size, &avatar.width, &avatar.height, &avatar.channels, 4);
+                avatar.pixels = stbi_load_from_memory(
+                    imageData.response, imageData.size, &avatar.width, &avatar.height, &avatar.channels, 4);
 
-            free(imageData.response);
+                free(imageData.response);
 
-            getImage(account.bannerUrl);
-            
-            banner.pixels = stbi_load_from_memory(
-                imageData.response, imageData.size, &banner.width, &banner.height, &banner.channels, 4);
+                getImage(userAccount.bannerUrl);
+                
+                banner.pixels = stbi_load_from_memory(
+                    imageData.response, imageData.size, &banner.width, &banner.height, &banner.channels, 4);
 
-            free(imageData.response);
+                free(imageData.response);
 
-            HBITMAP hbmpavatar = CreateHbitmapFromPixels(avatar.pixels, avatar.width, avatar.height, 112, 112);
-            hbmpbanner = CreateHbitmapFromPixels(banner.pixels, banner.width, banner.height, 595, 110);
+                HBITMAP hbmpavatar = CreateHbitmapFromPixels(avatar.pixels, avatar.width, avatar.height, 112, 112);
+                HBITMAP hbmpbanner = CreateHbitmapFromPixels(banner.pixels, banner.width, banner.height, 595, 110);
 
-            if (hbmpavatar) {
-                SendMessage(havatar_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
+                if (hbmpavatar) {
+                    SendMessage(havatar_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
+                } else {
+                    MessageBox(NULL, L"Avatar cannot be shown", L"Error", MB_ICONERROR);
+                }
+                
+                if (hbmpbanner) {
+                    SendMessage(hbanner_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpbanner);
+                } else {
+                    MessageBox(NULL, L"Banner cannot be shown", L"Error", MB_ICONERROR);
+                }
+
+                wchar_t following[32];
+                swprintf(following, sizeof(following), L"Following: %d", userAccount.followingNumber);
+
+                wchar_t followers[32];
+                swprintf(followers, sizeof(followers), L"Followers: %d", userAccount.followersNumber);
+
+                SendMessage(hdisplayname_static, WM_SETTEXT, 0, (LPARAM)userAccount.displayName);
+                SendMessage(hname_static, WM_SETTEXT, 0, (LPARAM)userAccount.username);
+                SendMessage(hfollowing_static, WM_SETTEXT, 0, (LPARAM)following);
+                SendMessage(hfollowers_static, WM_SETTEXT, 0, (LPARAM)followers);
+                SendMessage(hnote_static, WM_SETTEXT, 0, (LPARAM)userAccount.note);
             } else {
-                MessageBox(NULL, L"Avatar cannot be shown", L"Error", MB_ICONERROR);
+                getImage(account.avatarUrl);
+
+                avatar.pixels = stbi_load_from_memory(
+                    imageData.response, imageData.size, &avatar.width, &avatar.height, &avatar.channels, 4);
+
+                free(imageData.response);
+
+                getImage(account.bannerUrl);
+                
+                banner.pixels = stbi_load_from_memory(
+                    imageData.response, imageData.size, &banner.width, &banner.height, &banner.channels, 4);
+
+                free(imageData.response);
+
+                HBITMAP hbmpavatar = CreateHbitmapFromPixels(avatar.pixels, avatar.width, avatar.height, 112, 112);
+                HBITMAP hbmpbanner = CreateHbitmapFromPixels(banner.pixels, banner.width, banner.height, 595, 110);
+
+                if (hbmpavatar) {
+                    SendMessage(havatar_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
+                } else {
+                    MessageBox(NULL, L"Avatar cannot be shown", L"Error", MB_ICONERROR);
+                }
+                
+                if (hbmpbanner) {
+                    SendMessage(hbanner_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpbanner);
+                } else {
+                    MessageBox(NULL, L"Banner cannot be shown", L"Error", MB_ICONERROR);
+                }
+
+                wchar_t following[32];
+                swprintf(following, sizeof(following), L"Following: %d", account.followingNumber);
+
+                wchar_t followers[32];
+                swprintf(followers, sizeof(followers), L"Followers: %d", account.followersNumber);
+
+                SendMessage(hdisplayname_static, WM_SETTEXT, 0, (LPARAM)account.displayName);
+                SendMessage(hname_static, WM_SETTEXT, 0, (LPARAM)account.username);
+                SendMessage(hfollowing_static, WM_SETTEXT, 0, (LPARAM)following);
+                SendMessage(hfollowers_static, WM_SETTEXT, 0, (LPARAM)followers);
+                SendMessage(hnote_static, WM_SETTEXT, 0, (LPARAM)account.note);
             }
             
-            if (hbmpbanner) {
-                SendMessage(hbanner_area, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpbanner);
-            } else {
-                MessageBox(NULL, L"Banner cannot be shown", L"Error", MB_ICONERROR);
-            }
-
-            wchar_t following[32];
-            swprintf(following, sizeof(following), L"Following: %d", account.followingNumber);
-
-            wchar_t followers[32];
-            swprintf(followers, sizeof(followers), L"Followers: %d", account.followersNumber);
-
-            SendMessage(hdisplayname_static, WM_SETTEXT, 0, (LPARAM)account.displayName);
-            SendMessage(hname_static, WM_SETTEXT, 0, (LPARAM)account.username);
-            SendMessage(hfollowing_static, WM_SETTEXT, 0, (LPARAM)following);
-            SendMessage(hfollowers_static, WM_SETTEXT, 0, (LPARAM)followers);
-            SendMessage(hnote_static, WM_SETTEXT, 0, (LPARAM)account.note);
+            
         }
 
         case WM_COMMAND:

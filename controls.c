@@ -1,6 +1,9 @@
 #include "headers/tools.h"
 
 extern BOOL loggedIn;
+extern Account userAccount;
+extern Memory imageData;
+extern Image avatar;
 
 extern wchar_t serverAddress[128];
 
@@ -40,6 +43,15 @@ HFONT hfont[3];
 HINSTANCE hinstance;
 
 int createFonts() {
+
+    wchar_t systemFont[128];
+
+    LOGFONT lf;
+    HFONT hfontobject = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+    if (hfontobject && GetObject(hfontobject, sizeof(LOGFONT), &lf)) {
+        wcscpy(systemFont, lf.lfFaceName);
+    }
+
     hfont[0] = CreateFont(
         32,
         0,
@@ -52,11 +64,11 @@ int createFonts() {
         CLIP_DEFAULT_PRECIS, 
         ANTIALIASED_QUALITY, 
         FF_DONTCARE,
-        TEXT("Arial")
+        systemFont
     );
 
     hfont[1] = CreateFont(
-        12,
+        18,
         0,
         0,
         0,
@@ -67,7 +79,7 @@ int createFonts() {
         CLIP_DEFAULT_PRECIS, 
         ANTIALIASED_QUALITY, 
         FF_DONTCARE,
-        TEXT("Arial")
+        systemFont
     );
 
     hfont[2] = CreateFont(
@@ -82,8 +94,15 @@ int createFonts() {
         CLIP_DEFAULT_PRECIS, 
         ANTIALIASED_QUALITY, 
         FF_DONTCARE,
-        TEXT("Arial")
+        systemFont
     );
+}
+
+void resetHomeWindow() {
+    for (int i = 0; i < 7; i++) {
+        DestroyWindow(hmainControls[i]);
+        hmainControls[i] = NULL;
+    }
 }
 
 int homeWindow(HWND hwnd) {
@@ -105,13 +124,26 @@ int homeWindow(HWND hwnd) {
         hmainControls[5] = CreateWindow(
             WC_STATIC,
             L"",
-            SS_BITMAP | WS_VISIBLE | WS_CHILD,
-            25, 25, 32, 32,
+            SS_BITMAP | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+            15, 15, 32, 32,
             hwnd,
             (HMENU) IDP_AVATAR_M,
             GetModuleHandle(NULL),
             NULL
         );
+
+        getImage(userAccount.avatarUrl);
+
+        avatar.pixels = stbi_load_from_memory(
+            imageData.response, imageData.size, &avatar.width, &avatar.height, &avatar.channels, 4);
+
+        free(imageData.response);
+
+        HBITMAP hbmpavatar = CreateHbitmapFromPixels(avatar.pixels, avatar.width, avatar.height, 32, 32);
+
+        if (hbmpavatar)
+            SendMessage(hmainControls[5], STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
+
     }
 
     hmainControls[0] = CreateWindow(
@@ -129,13 +161,11 @@ int homeWindow(HWND hwnd) {
     HICON hicon = LoadIcon(hinstance, IDI_WARNING);
     SendMessage(hmainControls[0], BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)hicon);
 
-    
-
     hmainControls[2] = CreateWindow(
         WC_EDIT,
         L"Search the Fediverse",
-        WS_VISIBLE | WS_DISABLED | WS_CHILD,
-        150, 15, 200, 25,
+        WS_VISIBLE | WS_CHILD,
+        150, 20, 200, 20,
         hwnd,
         (HMENU) 10,
         GetModuleHandle(NULL),
@@ -186,7 +216,13 @@ int homeWindow(HWND hwnd) {
 
     //FIXME: example icon
     SendMessage(hmainControls[4], SB_SETICON, 0, (LPARAM)LoadIcon(NULL, IDI_WARNING));
-    SendMessage(hmainControls[4], SB_SETTEXT, 1, (LPARAM)charToWchar("Logged out"));
+    if (loggedIn) {
+        wchar_t statustext[128];
+        swprintf(statustext, sizeof(statustext), L"Logged in as: %ls", userAccount.username);
+        SendMessage(hmainControls[4], SB_SETTEXT, 1, (LPARAM)statustext);
+    
+    } else
+        SendMessage(hmainControls[4], SB_SETTEXT, 1, (LPARAM)charToWchar("Logged out"));
     SendMessage(hmainControls[4], SB_SETTEXT, 2, (LPARAM)celltext);
 
     HMENU hmenu = CreateMenu();
@@ -230,7 +266,6 @@ int homeWindow(HWND hwnd) {
     SetMenu(hwnd, hmenu);
 }
 
-
 int instanceWindow(HWND hwnd) {
     hinstance_title = CreateWindow(
         WC_STATIC,
@@ -246,7 +281,7 @@ int instanceWindow(HWND hwnd) {
     hinstance_edit = CreateWindow(
         WC_EDIT,
         NULL,
-        WS_VISIBLE | WS_CHILD,
+        WS_VISIBLE | WS_EX_CLIENTEDGE | WS_CHILD,
         25, 50, 350, 20,
         hwnd,
         (HMENU) IDE_INSTANCE_I,
@@ -279,6 +314,10 @@ int instanceWindow(HWND hwnd) {
         NULL
     );
 
+    SendMessage(hinstance_title, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hinstance_edit, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hinstance_subtitle, WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hinstance_button, WM_SETFONT, (WPARAM)hfont[1], TRUE);
 }
 
 int accountWindow(HWND hwnd) {
@@ -410,7 +449,7 @@ int codeWindow(HWND hwnd) {
         WC_STATIC,
         L"Enter the authorization code received in the browser below:",
         WS_VISIBLE | WS_CHILD,
-        20, 20, 260, 20,
+        20, 20, 280, 50,
         hwnd,
         (HMENU) 0,
         GetModuleHandle(NULL),
@@ -420,7 +459,7 @@ int codeWindow(HWND hwnd) {
     hcodeControls[1] = CreateWindow(
         WC_EDIT,
         NULL,
-        WS_VISIBLE | WS_CHILD,
+        WS_VISIBLE | WS_HSCROLL | ES_AUTOHSCROLL | WS_EX_CLIENTEDGE | WS_CHILD,
         20, 70, 360, 20,
         hwnd,
         (HMENU) IDE_INSTANCE_C,

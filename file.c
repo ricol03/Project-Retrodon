@@ -229,9 +229,6 @@ int readSecrets() {
         if (lineCount > 2) break;
     }
 
-    MessageBox(NULL, client_id, L"Error", MB_ICONERROR);
-    MessageBox(NULL, client_secret, L"Error", MB_ICONERROR);
-
     if (client_id[0] == L'\0' || client_secret[0] == L'\0')
         return 0;
     
@@ -277,8 +274,6 @@ int readToken() {
         lineCount++;
         if (lineCount > 3) break;
     }
-
-    MessageBox(NULL, user_token, L"Error", MB_ICONERROR);
 
     if (user_token[0] == L'\0')
         return 0;

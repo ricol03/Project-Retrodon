@@ -24,6 +24,7 @@ wchar_t finallink[2048];
 extern wchar_t authorizationCode[256];
 
 Post posts[MAX_POSTS];
+Account userAccount;
 Account account;
 
 extern HWND hwindow[4];
@@ -442,7 +443,6 @@ int loginProcedure(wchar_t * server) {
     if (!authorizeUser(server)) {
         if (!getUserToken(server)) {
             saveToken();
-            MessageBox(hwindow[0], user_token, L"Token", MB_ICONASTERISK);
             return 1;
         
         } else
@@ -463,7 +463,6 @@ int getUserToken(wchar_t * server) {
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-
 
         struct curl_slist * headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
@@ -516,4 +515,178 @@ int getUserToken(wchar_t * server) {
     
 }
 
+/* user connections */
 
+int getUserProfile(wchar_t * server) {
+    CURL * curl = curl_easy_init();
+
+    if (curl) {
+        createEndpoint(server, L"/api/v1/accounts/verify_credentials", NULL);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        
+        char header_string[512];
+
+        snprintf(header_string, sizeof(header_string), "Authorization: Bearer %ls", user_token);
+
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, header_string);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk3);
+
+        CURLcode result = curl_easy_perform(curl);
+
+        curl_slist_free_all(headers);
+
+        if (result != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+            MessageBox(NULL, L"Info could not be verified", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
+            return -1;
+        } else {
+            cJSON * json = cJSON_Parse(chunk3.response);
+            if (json) {
+                cJSON * id = cJSON_GetObjectItemCaseSensitive(json, "id");
+
+                cJSON * username  = cJSON_GetObjectItemCaseSensitive(json, "username");
+                cJSON * display_name  = cJSON_GetObjectItemCaseSensitive(json, "display_name");
+
+                cJSON * created_at  = cJSON_GetObjectItemCaseSensitive(json, "created_at");
+                cJSON * note = cJSON_GetObjectItemCaseSensitive(json, "note");
+
+                cJSON * avatar_url = cJSON_GetObjectItemCaseSensitive(json, "avatar");
+                cJSON * banner_url = cJSON_GetObjectItemCaseSensitive(json, "header");
+
+                cJSON * following = cJSON_GetObjectItemCaseSensitive(json, "following_count");
+                cJSON * followers = cJSON_GetObjectItemCaseSensitive(json, "followers_count");
+
+                wcscpy(userAccount.id, charToWchar(id->valuestring));
+                wcscpy(userAccount.username, charToWchar(username->valuestring));
+                wcscpy(userAccount.displayName, charToWchar(display_name->valuestring));
+                wcscpy(userAccount.createdAt, charToWchar(created_at->valuestring));
+                wcscpy(userAccount.note, charToWchar(removeHtml(note->valuestring)));
+                wcscpy(userAccount.avatarUrl, charToWchar(avatar_url->valuestring));
+                wcscpy(userAccount.bannerUrl, charToWchar(banner_url->valuestring));
+                userAccount.followingNumber = following->valueint;
+                userAccount.followersNumber = followers->valueint;
+            }
+        }            
+        
+        curl_easy_cleanup(curl);
+    }
+
+    return 0;
+}
+
+int accessUserTimeline(wchar_t * server) {
+    CURL * curl = curl_easy_init();
+
+    if (curl) {
+        resetMemory(&data);
+        resetPosts(posts);
+
+        createEndpoint(server, L"/api/v1/timelines/home", L"?limit=40");
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+        char header_string[512];
+        snprintf(header_string, sizeof(header_string), "Authorization: Bearer %ls", user_token);
+
+        struct curl_slist * headers = NULL;
+        headers = curl_slist_append(headers, header_string);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
+
+        //TODO: do a while, while the curl performs failed and the user clicks retry
+        /*while ()
+        {}*/
+        
+        CURLcode result = curl_easy_perform(curl);
+
+        if (result != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+            MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
+        } else {
+            //printf("JSON: %s", data.response);
+
+            cJSON * root = cJSON_Parse(data.response);
+
+            if (root == NULL) {
+                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
+            } else {
+                if (!cJSON_IsArray(root)) {
+                    printf("Error: expected array of posts\n");
+                    return -1;
+                }
+
+                cJSON * item = NULL;
+                cJSON * reblog = NULL;
+                size_t i = 0;
+
+                cJSON_ArrayForEach(item, root) {
+                    if (i >= MAX_POSTS)
+                        break;
+
+                    cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
+                    cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
+
+                    cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
+                    cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
+                    
+                    cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+
+                    cJSON * reblog  = cJSON_GetObjectItemCaseSensitive(item, "reblog");
+
+                    if (reblog && cJSON_IsObject(reblog))
+                        posts[i].reblog = TRUE;
+                    else
+                        posts[i].reblog = FALSE;
+
+                    if (created && cJSON_IsString(created)) {
+                        wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
+                    } else
+                        posts[i].createdAt[0] = '\0';
+
+                    if (content && cJSON_IsString(content))
+                        wcscpy(posts[i].content, charToWchar(removeHtml(content->valuestring)));
+                    else
+                        posts[i].content[0] = '\0';
+
+                    if (username && cJSON_IsString(username))
+                        wcscpy(posts[i].username, charToWchar(username->valuestring));
+                    else
+                        posts[i].username[0] = '\0';
+
+                    if (id && cJSON_IsString(id))
+                        wcscpy(posts[i].id, charToWchar(id->valuestring));
+                    else
+                        posts[i].id[0] = '\0';
+
+                    posts[i].createdAt[MAX_STR - 1]  = '\0';
+                    posts[i].content[MAX_STR - 1]    = '\0';
+                    posts[i].username[MAX_STR - 1]   = '\0';
+                    posts[i].id[MAX_STR - 1]         = '\0';
+                    
+                    i++;
+                }
+
+                cJSON_Delete(root);
+            }
+        }
+            
+        curl_easy_cleanup(curl);
+    }
+
+    //resetMemory(&data);
+
+    return 0;
+}
+
+int accessLocalTimeline(wchar_t * server) {
+
+}

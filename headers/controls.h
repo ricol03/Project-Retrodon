@@ -5,6 +5,7 @@
 
 int createFonts();
 
+void resetHomeWindow();
 int homeWindow(HWND hwnd);
 int instanceWindow(HWND hwnd);
 int accountWindow(HWND hwnd);
