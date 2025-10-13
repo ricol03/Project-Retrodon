@@ -431,6 +431,8 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
         case WM_COMMAND: {
             switch (LOWORD(wparam)) {
+
+                /* buttons */
                 case IDP_AVATAR_M: {
                     if (HIWORD(wparam) == STN_CLICKED) {
                         clickedUserProfile = TRUE;
@@ -494,7 +496,129 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 break;
 
                 case IDM_TIMELINE_MAINPAGE: {
+
+                    HMENU hmenu = GetMenu(hwnd);
                     
+                    UINT statelocal = GetMenuState(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND);
+                    if (statelocal & MF_CHECKED) {
+                        CheckMenuItem(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND | MF_UNCHECKED);
+                        CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_CHECKED);
+
+                        accessUserTimeline(serverAddress);
+
+                        for (int i = 0; i < MAX_POSTS; i++) {
+                            LVITEM item = {0};
+                            item.mask = LVIF_TEXT;
+                            item.iItem = i;
+                            item.pszText = L"Example post";
+                            ListView_InsertItem(hmainControls[3], &item);
+                        }
+
+                        ListView_SetItemCount(hmainControls[3], MAX_POSTS);
+
+                    }
+                    
+                    UINT statefederation = GetMenuState(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND);
+                    if (statefederation & MF_CHECKED) {
+                        CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_UNCHECKED);
+                        CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_CHECKED);
+
+                        accessUserTimeline(serverAddress);
+
+                        for (int i = 0; i < MAX_POSTS; i++) {
+                            LVITEM item = {0};
+                            item.mask = LVIF_TEXT;
+                            item.iItem = i;
+                            item.pszText = L"Example post";
+                            ListView_InsertItem(hmainControls[3], &item);
+                        }
+
+                        ListView_SetItemCount(hmainControls[3], MAX_POSTS);
+                    }
+                }
+                break;
+
+                case IDM_TIMELINE_LOCAL: {
+                    HMENU hmenu = GetMenu(hwnd);
+                    
+                    UINT statemain = GetMenuState(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND);
+                    if (statemain & MF_CHECKED) {
+                        CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_UNCHECKED);
+                        CheckMenuItem(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND | MF_CHECKED);
+
+                        accessUserTimeline(serverAddress);
+
+                        for (int i = 0; i < MAX_POSTS; i++) {
+                            LVITEM item = {0};
+                            item.mask = LVIF_TEXT;
+                            item.iItem = i;
+                            item.pszText = L"Example post";
+                            ListView_InsertItem(hmainControls[3], &item);
+                        }
+
+                        ListView_SetItemCount(hmainControls[3], MAX_POSTS);
+
+                    }
+                    
+                    UINT statefederation = GetMenuState(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND);
+                    if (statefederation & MF_CHECKED) {
+                        CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_UNCHECKED);
+                        CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_CHECKED);
+
+                        accessUserTimeline(serverAddress);
+
+                        for (int i = 0; i < MAX_POSTS; i++) {
+                            LVITEM item = {0};
+                            item.mask = LVIF_TEXT;
+                            item.iItem = i;
+                            item.pszText = L"Example post";
+                            ListView_InsertItem(hmainControls[3], &item);
+                        }
+
+                        ListView_SetItemCount(hmainControls[3], MAX_POSTS);
+                    }
+                }
+                break;
+
+                case IDM_TIMELINE_FEDERATION: {
+                    HMENU hmenu = GetMenu(hwnd);
+                    
+                    UINT statemain = GetMenuState(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND);
+                    if (statemain & MF_CHECKED) {
+                        CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_UNCHECKED);
+                        CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_CHECKED);
+
+                        accessPublicTimeline(serverAddress);
+
+                        for (int i = 0; i < MAX_POSTS; i++) {
+                            LVITEM item = {0};
+                            item.mask = LVIF_TEXT;
+                            item.iItem = i;
+                            item.pszText = L"Example post";
+                            ListView_InsertItem(hmainControls[3], &item);
+                        }
+
+                        ListView_SetItemCount(hmainControls[3], MAX_POSTS);
+
+                    }
+                    
+                    UINT statelocal = GetMenuState(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND);
+                    if (statelocal & MF_CHECKED) {
+                        CheckMenuItem(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND | MF_UNCHECKED);
+                        CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_CHECKED);
+
+                        accessPublicTimeline(serverAddress);
+
+                        for (int i = 0; i < MAX_POSTS; i++) {
+                            LVITEM item = {0};
+                            item.mask = LVIF_TEXT;
+                            item.iItem = i;
+                            item.pszText = L"Example post";
+                            ListView_InsertItem(hmainControls[3], &item);
+                        }
+
+                        ListView_SetItemCount(hmainControls[3], MAX_POSTS);
+                    }
                 }
                 break;
 
@@ -677,9 +801,8 @@ LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARA
         case WM_COMMAND:
             switch(wparam) {
                 case IDB_OK_A: {
-                    //ShowWindow(hwindow[2], SW_HIDE);
                     DestroyWindow(hwindow[2]);
-                    return TRUE;
+                    return 0;
                 }    
             }
             break;
