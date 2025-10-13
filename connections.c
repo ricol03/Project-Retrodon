@@ -93,6 +93,7 @@ void getImage(wchar_t * link) {
 /* public connections */
 
 int accessPublicTimeline(wchar_t * server) {
+
     CURL * curl = curl_easy_init();
 
     if (curl) {
@@ -203,7 +204,7 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
             MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
-            cJSON *json = cJSON_Parse(chunk2.response);
+            cJSON * json = cJSON_Parse(chunk2.response);
             if (json) {
                 cJSON * id = cJSON_GetObjectItemCaseSensitive(json, "id");
 
@@ -344,7 +345,6 @@ int getAccessToken(wchar_t * server) {
             if (json) {
                 cJSON *access_token = cJSON_GetObjectItemCaseSensitive(json, "access_token");
                 if (cJSON_IsString(access_token) && (access_token->valuestring != NULL)) {
-                    MessageBox(NULL, L"Deu token", L"Aviso", MB_ICONEXCLAMATION);
                     printf("Access token: %s\n", access_token->valuestring);
                     strcpy(public_token, access_token->valuestring);
                 } else {

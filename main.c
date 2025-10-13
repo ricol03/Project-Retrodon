@@ -214,6 +214,29 @@ int preparingApplication() {
     return 1;
 }
 
+void createAccountWindow() {
+    hwindow[2] = CreateWindowEx(
+        0,
+        ACCOUNT_CLASS,
+        L"Account",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        (GetSystemMetrics(SM_CXSCREEN) / 2) - 300, (GetSystemMetrics(SM_CYSCREEN) / 2) - 208, 600, 415,
+        NULL,
+        NULL,
+        glhinstance,
+        NULL
+    );
+    
+    if (hwindow[2] == NULL) {
+        wchar_t error[512];
+        swprintf(error, 512, L"Error: %lu", GetLastError());
+        MessageBox(NULL, error, L"Error", MB_ICONERROR);
+        MessageBox(NULL, L"Unable to create window", 
+                L"Error", MB_ICONERROR | MB_OK);
+        //return 0;
+    }
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     return wWinMain(hInstance, hPrevInstance, GetCommandLineW(), nShowCmd);
 }
@@ -269,26 +292,6 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
 
         RegisterClass(&accountwindowclass);
 
-        hwindow[2] = CreateWindowEx(
-            0,
-            ACCOUNT_CLASS,
-            L"Account",
-            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-            (GetSystemMetrics(SM_CXSCREEN) / 2) - 300, (GetSystemMetrics(SM_CYSCREEN) / 2) - 208, 600, 415,
-            NULL,
-            NULL,
-            glhinstance,
-            NULL
-        );
-        
-        if (hwindow[2] == NULL) {
-            wchar_t error[512];
-            swprintf(error, 512, L"Error: %lu", GetLastError());
-            MessageBox(NULL, error, L"Error", MB_ICONERROR);
-            MessageBox(NULL, L"Unable to create window", 
-                    L"Error", MB_ICONERROR | MB_OK);
-            return 0;
-        }
         #pragma endregion
 
         #pragma region CodeWindow
@@ -341,7 +344,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
     
     switch (message) {
         case WM_CREATE: {
-            
             if (loggedIn) {
                 getUserProfile(serverAddress);
                 accessUserTimeline(serverAddress);
@@ -396,8 +398,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                         accessPublicAccount(serverAddress, buffer);
 
-                        ShowWindow(hwindow[2], SW_SHOW);
-                        UpdateWindow(hwindow[2]);
+                        createAccountWindow();
 
                     }
                     break;
@@ -430,31 +431,32 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
         case WM_COMMAND: {
             switch (LOWORD(wparam)) {
-
                 case IDP_AVATAR_M: {
-
                     if (HIWORD(wparam) == STN_CLICKED) {
                         clickedUserProfile = TRUE;
-                        MessageBox(hwnd, L"Picture clicked!", L"Info", MB_OK);
                         getUserProfile(serverAddress);
 
-                        ShowWindow(hwindow[2], SW_SHOW);
-                        UpdateWindow(hwindow[2]);
+                        createAccountWindow();
 
                         clickedUserProfile = FALSE;
                     }
-
-                    
                 }
                 break;
 
                 case IDB_LOGIN: {
                     if (loginProcedure(serverAddress)) {
                         loggedIn = TRUE;
+
                         resetHomeWindow();
                         getUserProfile(serverAddress);
-                        accessUserTimeline(serverAddress);
+                        
+                        RECT rc;
+                        GetClientRect(hwindow[0], &rc);
+
                         homeWindow(hwindow[0]);
+                        SendMessage(hwnd, WM_SIZE, 0, MAKELPARAM(rc.right, rc.bottom));
+
+                        accessUserTimeline(serverAddress);
                     }
                 }
                 break;
@@ -479,6 +481,22 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 break;
 
                 /* menus */
+                case IDM_FILE_LOGOUT: {
+                    if (MessageBox(hwindow[0], L"Are you sure you want to logout?", L"Confirmation", MB_ICONQUESTION | MB_YESNO) == IDYES) {
+                        MessageBox(hwindow[0], L"Logout logic", L"Confirmation", MB_ICONQUESTION | MB_YESNO);
+                    }
+                }
+                break;
+
+                case IDM_FILE_CLOSE: {
+                    DestroyWindow(hwindow[0]);
+                }
+                break;
+
+                case IDM_TIMELINE_MAINPAGE: {
+                    
+                }
+                break;
 
                 case IDM_ABOUT_ABOUT: {
                     MessageBox(hwindow[0], L"Project Retrodon: version 0.1\nAuthor: ricol03", L"About", MB_OK);
@@ -494,8 +512,8 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
             if (loggedIn) {
                 MoveWindow(hmainControls[0], width - 65, 15, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
-                MoveWindow(hmainControls[2], 65, 15, width - SMALL_BUTTON_WIDTH - 90, BUTTON_HEIGHT, TRUE);
-                MoveWindow(hmainControls[5], 15, 15, 32, 32, TRUE);
+                MoveWindow(hmainControls[2], 65, 20, width - SMALL_BUTTON_WIDTH - 90, 25, TRUE);
+                MoveWindow(hmainControls[5], 15, 15, 35, 35, TRUE);
             } else {
                 MoveWindow(hmainControls[0], width - SMALL_BUTTON_WIDTH - 140, 15, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
                 MoveWindow(hmainControls[1], width - 115, 15, BUTTON_WIDTH, BUTTON_HEIGHT, TRUE);
@@ -659,7 +677,8 @@ LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARA
         case WM_COMMAND:
             switch(wparam) {
                 case IDB_OK_A: {
-                    ShowWindow(hwindow[2], SW_HIDE);
+                    //ShowWindow(hwindow[2], SW_HIDE);
+                    DestroyWindow(hwindow[2]);
                     return TRUE;
                 }    
             }
@@ -676,7 +695,6 @@ LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARA
 
         case WM_CLOSE:
         case WM_DESTROY: 
-            
             return 0;
     }
 

@@ -1,21 +1,30 @@
 #ifndef CONST_H_
 #define CONST_H_
 
+//menus
+
 #define IDM_FILE_LOGOUT                      10
 #define IDM_FILE_CLOSE                       11
 
 /*-------------------------------*/
 
-#define IDM_SEARCH_SEARCHBOX                 12
+#define IDM_TIMELINE_MAINPAGE                12
+#define IDM_TIMELINE_LOCAL                   13
+#define IDM_TIMELINE_FEDERATION              14
 
 /*-------------------------------*/
 
-#define IDM_SETTINGS_SETTINGS                13
+#define IDM_VIEW_SMTH                        15
+#define IDM_VIEW_SMTH2                       16
 
 /*-------------------------------*/
 
-#define IDM_ABOUT_HELP                       14
-#define IDM_ABOUT_ABOUT                      15
+#define IDM_OPTIONS_PREFERENCES              17
+
+/*-------------------------------*/
+
+#define IDM_ABOUT_HELP                       18
+#define IDM_ABOUT_ABOUT                      19
 
 /*-------------------------------*/
 
