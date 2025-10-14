@@ -406,7 +406,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                 case LVN_GETDISPINFO: {
                     if (pnmh->idFrom == IDC_LISTVIEW) {
-                        NMLVDISPINFO *plvdi = (NMLVDISPINFO *)lparam;
+                        NMLVDISPINFO * plvdi = (NMLVDISPINFO *)lparam;
                         if (plvdi->item.mask & LVIF_TEXT) {
 
                             int row = plvdi->item.iItem;
@@ -430,6 +430,13 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
         break;
 
         case WM_COMMAND: {
+
+            HMENU hmenu = GetMenu(hwnd);
+                    
+            UINT statemain = GetMenuState(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND);
+            UINT statelocal = GetMenuState(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND);
+            UINT statefederation = GetMenuState(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND);
+
             switch (LOWORD(wparam)) {
 
                 /* buttons */
@@ -464,9 +471,14 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 break;
 
                 case IDB_REFRESH: {
-                    if (loggedIn)
-                        accessUserTimeline(serverAddress);
-                    else
+                    if (loggedIn) {
+                        if (statemain & MF_CHECKED)
+                            accessUserTimeline(serverAddress);
+                        else if (statelocal & MF_CHECKED)
+                            accessLocalTimeline(serverAddress);
+                        else
+                            accessPublicTimeline(serverAddress);
+                    } else
                         accessPublicTimeline(serverAddress);
 
                     for (int i = 0; i < MAX_POSTS; i++) {
@@ -485,7 +497,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 /* menus */
                 case IDM_FILE_LOGOUT: {
                     if (MessageBox(hwindow[0], L"Are you sure you want to logout?", L"Confirmation", MB_ICONQUESTION | MB_YESNO) == IDYES) {
-                        MessageBox(hwindow[0], L"Logout logic", L"Confirmation", MB_ICONQUESTION | MB_YESNO);
+                        MessageBox(hwindow[0], L"Logout logic in a future version", L"Confirmation", MB_ICONQUESTION | MB_YESNO);
                     }
                 }
                 break;
@@ -497,9 +509,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                 case IDM_TIMELINE_MAINPAGE: {
 
-                    HMENU hmenu = GetMenu(hwnd);
-                    
-                    UINT statelocal = GetMenuState(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND);
                     if (statelocal & MF_CHECKED) {
                         CheckMenuItem(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND | MF_UNCHECKED);
                         CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_CHECKED);
@@ -518,7 +527,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                     }
                     
-                    UINT statefederation = GetMenuState(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND);
                     if (statefederation & MF_CHECKED) {
                         CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_UNCHECKED);
                         CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_CHECKED);
@@ -539,14 +547,11 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 break;
 
                 case IDM_TIMELINE_LOCAL: {
-                    HMENU hmenu = GetMenu(hwnd);
-                    
-                    UINT statemain = GetMenuState(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND);
                     if (statemain & MF_CHECKED) {
                         CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_UNCHECKED);
                         CheckMenuItem(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND | MF_CHECKED);
 
-                        accessUserTimeline(serverAddress);
+                        accessLocalTimeline(serverAddress);
 
                         for (int i = 0; i < MAX_POSTS; i++) {
                             LVITEM item = {0};
@@ -560,7 +565,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                     }
                     
-                    UINT statefederation = GetMenuState(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND);
                     if (statefederation & MF_CHECKED) {
                         CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_UNCHECKED);
                         CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_CHECKED);
@@ -581,9 +585,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 break;
 
                 case IDM_TIMELINE_FEDERATION: {
-                    HMENU hmenu = GetMenu(hwnd);
-                    
-                    UINT statemain = GetMenuState(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND);
                     if (statemain & MF_CHECKED) {
                         CheckMenuItem(hmenu, IDM_TIMELINE_MAINPAGE, MF_BYCOMMAND | MF_UNCHECKED);
                         CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_CHECKED);
@@ -602,7 +603,6 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                     }
                     
-                    UINT statelocal = GetMenuState(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND);
                     if (statelocal & MF_CHECKED) {
                         CheckMenuItem(hmenu, IDM_TIMELINE_LOCAL, MF_BYCOMMAND | MF_UNCHECKED);
                         CheckMenuItem(hmenu, IDM_TIMELINE_FEDERATION, MF_BYCOMMAND | MF_CHECKED);

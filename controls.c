@@ -335,7 +335,8 @@ int accountWindow(HWND hwnd) {
             hfollow_button = CreateWindow(
                 WC_BUTTON,
                 L"Follow",
-                WS_VISIBLE | WS_CHILD,
+                //TODO: remove disabled state in future version
+                WS_VISIBLE | WS_DISABLED | WS_CHILD,
                 490, 145, 80, 30,
                 hwnd,
                 (HMENU) IDB_FOLLOW_A,
@@ -388,7 +389,6 @@ int accountWindow(HWND hwnd) {
         GetModuleHandle(NULL),
         NULL
     );
-
 
     hname_static = CreateWindow(
         WC_STATIC,
@@ -470,7 +470,7 @@ int codeWindow(HWND hwnd) {
     hcodeControls[1] = CreateWindow(
         WC_EDIT,
         NULL,
-        WS_VISIBLE | WS_HSCROLL | ES_AUTOHSCROLL | WS_EX_CLIENTEDGE | WS_CHILD,
+        WS_VISIBLE | ES_AUTOHSCROLL | WS_EX_CLIENTEDGE | WS_CHILD,
         20, 70, 360, 20,
         hwnd,
         (HMENU) IDE_INSTANCE_C,

@@ -248,22 +248,44 @@ int createApplication(wchar_t * server) {
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 
-        curl_mime * mime = curl_mime_init(curl);
+        //#if LIBCURL_VERSION_NUM >= 0x073800
+            curl_mime * mime = curl_mime_init(curl);
 
-        curl_mimepart * part = curl_mime_addpart(mime);
-        curl_mime_name(part, "client_name");
-        curl_mime_data(part, "Retrodon", CURL_ZERO_TERMINATED);
+            curl_mimepart * part = curl_mime_addpart(mime);
+            curl_mime_name(part, "client_name");
+            curl_mime_data(part, "Retrodon", CURL_ZERO_TERMINATED);
 
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "redirect_uris");
-        curl_mime_data(part, "urn:ietf:wg:oauth:2.0:oob", CURL_ZERO_TERMINATED);
+            part = curl_mime_addpart(mime);
+            curl_mime_name(part, "redirect_uris");
+            curl_mime_data(part, "urn:ietf:wg:oauth:2.0:oob", CURL_ZERO_TERMINATED);
 
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "scopes");
-        curl_mime_data(part, "read write push", CURL_ZERO_TERMINATED);
+            part = curl_mime_addpart(mime);
+            curl_mime_name(part, "scopes");
+            curl_mime_data(part, "read write push", CURL_ZERO_TERMINATED);
 
-        curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
- 
+            curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
+        /*#else
+            struct curl_httppost * formpost = NULL;
+            struct curl_httppost * lastptr = NULL;
+
+            curl_formadd(&formpost, &lastptr,
+                        CURLFORM_COPYNAME, "client_name",
+                        CURLFORM_COPYCONTENTS, "Retrodon",
+                        CURLFORM_END);
+
+            curl_formadd(&formpost, &lastptr,
+                        CURLFORM_COPYNAME, "redirect_uris",
+                        CURLFORM_COPYCONTENTS, "urn:ietf:wg:oauth:2.0:oob",
+                        CURLFORM_END);
+
+            curl_formadd(&formpost, &lastptr,
+                        CURLFORM_COPYNAME, "scopes",
+                        CURLFORM_COPYCONTENTS, "read write push",
+                        CURLFORM_END);
+
+            curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+        #endif*/
+
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
 
@@ -310,24 +332,46 @@ int getAccessToken(wchar_t * server) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
-        curl_mime * mime = curl_mime_init(curl);
+        //#if LIBCURL_VERSION_NUM >= 0x073800
+            curl_mime * mime = curl_mime_init(curl);
 
-        curl_mimepart * part = curl_mime_addpart(mime);
-        curl_mime_name(part, "client_id");
-        curl_mime_data(part, wcharToChar(client_id), CURL_ZERO_TERMINATED);
+            curl_mimepart * part = curl_mime_addpart(mime);
+            curl_mime_name(part, "client_id");
+            curl_mime_data(part, wcharToChar(client_id), CURL_ZERO_TERMINATED);
 
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "client_secret");
-        curl_mime_data(part, wcharToChar(client_secret), CURL_ZERO_TERMINATED);
+            part = curl_mime_addpart(mime);
+            curl_mime_name(part, "client_secret");
+            curl_mime_data(part, wcharToChar(client_secret), CURL_ZERO_TERMINATED);
 
-        part = curl_mime_addpart(mime);
-        curl_mime_name(part, "grant_type");
-        curl_mime_data(part, "client_credentials", CURL_ZERO_TERMINATED);
+            part = curl_mime_addpart(mime);
+            curl_mime_name(part, "grant_type");
+            curl_mime_data(part, "client_credentials", CURL_ZERO_TERMINATED);
 
-        curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
+            curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
+        /*#else
+            struct curl_httppost * formpost = NULL;
+            struct curl_httppost * lastptr = NULL;
 
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk2);
+            curl_formadd(&formpost, &lastptr,
+                        CURLFORM_COPYNAME, "client_id",
+                        CURLFORM_COPYCONTENTS, wcharToChar(client_id),
+                        CURLFORM_END);
+
+            curl_formadd(&formpost, &lastptr,
+                        CURLFORM_COPYNAME, "client_secret",
+                        CURLFORM_COPYCONTENTS, wcharToChar(client_secret),
+                        CURLFORM_END);
+
+            curl_formadd(&formpost, &lastptr,
+                        CURLFORM_COPYNAME, "grant_type",
+                        CURLFORM_COPYCONTENTS, "client_credentials",
+                        CURLFORM_END);
+
+            curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+        #endif*/
+
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk2);
 
         CURLcode result = curl_easy_perform(curl);
 
@@ -688,5 +732,108 @@ int accessUserTimeline(wchar_t * server) {
 }
 
 int accessLocalTimeline(wchar_t * server) {
+    CURL * curl = curl_easy_init();
 
+    if (curl) {
+        resetMemory(&data);
+        resetPosts(posts);
+
+        createEndpoint(server, L"/api/v1/timelines/public", L"?local=true&limit=40");
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+        char header_string[512];
+        snprintf(header_string, sizeof(header_string), "Authorization: Bearer %ls", user_token);
+
+        struct curl_slist * headers = NULL;
+        headers = curl_slist_append(headers, header_string);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
+
+        //TODO: do a while, while the curl performs failed and the user clicks retry
+        /*while ()
+        {}*/
+
+        CURLcode result = curl_easy_perform(curl);
+
+        if (result != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+            MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
+        } else {
+            //printf("JSON: %s", data.response);
+
+            cJSON * root = cJSON_Parse(data.response);
+
+            if (root == NULL) {
+                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
+            } else {
+                if (!cJSON_IsArray(root)) {
+                    printf("Error: expected array of posts\n");
+                    return -1;
+                }
+
+                cJSON * item = NULL;
+                cJSON * reblog = NULL;
+                size_t i = 0;
+
+                cJSON_ArrayForEach(item, root) {
+                    if (i >= MAX_POSTS)
+                        break;
+
+                    cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
+                    cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
+
+                    cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
+                    cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
+                    
+                    cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+
+                    cJSON * reblog  = cJSON_GetObjectItemCaseSensitive(item, "reblog");
+
+                    if (reblog && cJSON_IsObject(reblog))
+                        posts[i].reblog = TRUE;
+                    else
+                        posts[i].reblog = FALSE;
+
+                    if (created && cJSON_IsString(created)) {
+                        wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
+                    } else
+                        posts[i].createdAt[0] = '\0';
+
+                    if (content && cJSON_IsString(content))
+                        wcscpy(posts[i].content, charToWchar(removeHtml(content->valuestring)));
+                    else
+                        posts[i].content[0] = '\0';
+
+                    if (username && cJSON_IsString(username))
+                        wcscpy(posts[i].username, charToWchar(username->valuestring));
+                    else
+                        posts[i].username[0] = '\0';
+
+                    if (id && cJSON_IsString(id))
+                        wcscpy(posts[i].id, charToWchar(id->valuestring));
+                    else
+                        posts[i].id[0] = '\0';
+
+                    posts[i].createdAt[MAX_STR - 1]  = '\0';
+                    posts[i].content[MAX_STR - 1]    = '\0';
+                    posts[i].username[MAX_STR - 1]   = '\0';
+                    posts[i].id[MAX_STR - 1]         = '\0';
+                    
+                    i++;
+                }
+
+                cJSON_Delete(root);
+            }
+        }
+            
+        curl_easy_cleanup(curl);
+    }
+
+    //resetMemory(&data);
+
+    return 0;
 }
