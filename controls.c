@@ -29,6 +29,19 @@ HWND hfollow_button, hfollowing_static, hfollowers_static, hdisplayname_static, 
 // 3 - continue button
 HWND hcodeControls[12];
 
+// post window controls
+// 0 - close button
+// 1 - user static
+// 2 - date static
+// 3 - picture static
+// 4 - note static
+// 5 - comments static
+// 6 - favourites static
+// 7 - boosts static
+// 8 - more button
+// 9 - visibility static
+HWND hpostControls[10];
+
 //fonts
 //0 - title font
 //1 - text font
@@ -192,9 +205,6 @@ int homeWindow(HWND hwnd) {
     col.cx = 150;
     col.pszText = L"Posted at";
     ListView_InsertColumn(hmainControls[3], 2, &col);
-
-    col.cx = 0;
-    ListView_InsertColumn(hmainControls[3], 3, &col);
 
     ListView_SetIconSpacing(hmainControls[3], 100, 60);
 
@@ -470,7 +480,7 @@ int codeWindow(HWND hwnd) {
     hcodeControls[1] = CreateWindow(
         WC_EDIT,
         NULL,
-        WS_VISIBLE | ES_AUTOHSCROLL | WS_EX_CLIENTEDGE | WS_CHILD,
+        WS_VISIBLE | WS_EX_CLIENTEDGE | WS_CHILD,
         20, 70, 360, 20,
         hwnd,
         (HMENU) IDE_INSTANCE_C,
@@ -501,3 +511,134 @@ int codeWindow(HWND hwnd) {
     );
 }
 
+int postWindow(HWND hwnd) {
+    RECT rc;
+    GetClientRect(hwnd, &rc);
+
+    hpostControls[0] = CreateWindow(
+        WC_BUTTON,
+        L"Close",
+        WS_VISIBLE | WS_CHILD,
+        rc.right - 80, rc.bottom - 40, 65, 30,
+        hwnd,
+        (HMENU) IDB_CLOSE_P,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[1] = CreateWindow(
+        WC_STATIC,
+        L"Post by ",
+        WS_VISIBLE | WS_CHILD,
+        rc.left + 80, rc.top + 10, 165, 30,
+        hwnd,
+        (HMENU) 54551,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[2] = CreateWindow(
+        WC_STATIC,
+        L"Date ",
+        WS_VISIBLE | WS_CHILD,
+        rc.left + 80, rc.top + 30, 165, 30,
+        hwnd,
+        (HMENU) 54552,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[3] = CreateWindow(
+        WC_STATIC,
+        L"",
+        SS_BITMAP | WS_VISIBLE | WS_CHILD,
+        rc.left + 10, rc.top + 10, 65, 30,
+        hwnd,
+        (HMENU) 54553,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[4] = CreateWindow(
+        WC_EDIT,
+        L"Note",
+        WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+        10, 80, 580, 250,
+        hwnd,
+        (HMENU) 54554,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[5] = CreateWindow(
+        WC_STATIC,
+        L"Comments: ",
+        WS_VISIBLE | WS_CHILD,
+        rc.right - 500, rc.bottom - 34, 90, 20,
+        hwnd,
+        (HMENU) 54555,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[6] = CreateWindow(
+        WC_STATIC,
+        L"Favourites: ",
+        WS_VISIBLE | WS_CHILD,
+        rc.right - 350, rc.bottom - 34, 90, 20,
+        hwnd,
+        (HMENU) 54556,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[7] = CreateWindow(
+        WC_STATIC,
+        L"Boosts: ",
+        WS_VISIBLE | WS_CHILD,
+        rc.right - 200, rc.bottom - 34, 90, 20,
+        hwnd,
+        (HMENU) 54557,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[8] = CreateWindow(
+        WC_BUTTON,
+        L"...",
+        WS_VISIBLE | WS_CHILD,
+        rc.left + 10, rc.bottom - 40, 30, 30,
+        hwnd,
+        (HMENU) IDB_MORE_P,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[9] = CreateWindow(
+        WC_STATIC,
+        L"Visibility ",
+        WS_VISIBLE | WS_CHILD,
+        rc.left + 80, rc.top + 30, 165, 30,
+        hwnd,
+        (HMENU) 54558,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    hpostControls[10] = CreateWindow(
+        WC_STATIC,
+        L"Language ",
+        WS_VISIBLE | WS_CHILD,
+        rc.left + 80, rc.top + 30, 165, 30,
+        hwnd,
+        (HMENU) 54558,
+        GetModuleHandle(NULL),
+        NULL
+    );
+
+    SendMessage(hpostControls[0], WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hpostControls[1], WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hpostControls[2], WM_SETFONT, (WPARAM)hfont[1], TRUE);
+    SendMessage(hpostControls[4], WM_SETFONT, (WPARAM)hfont[1], TRUE);
+
+}

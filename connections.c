@@ -33,6 +33,8 @@ extern PAINTSTRUCT ps;
 
 BOOL runningCodeDialog = TRUE;
 
+extern int postNum;
+
 
 static size_t WriteCallback(void * contents, size_t size, size_t nmemb, void * userp) {
     size_t totalSize = size * nmemb;
@@ -77,7 +79,7 @@ void getImage(wchar_t * link) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&imageData);
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
         CURLcode result = curl_easy_perform(curl);
 
@@ -103,7 +105,7 @@ int accessPublicTimeline(wchar_t * server) {
         createEndpoint(server, L"/api/v1/timelines/public", L"?limit=64");
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
@@ -135,14 +137,21 @@ int accessPublicTimeline(wchar_t * server) {
                     if (i >= MAX_POSTS)
                         break;
 
+                    cJSON * postid   = cJSON_GetObjectItemCaseSensitive(item, "id");
+
                     cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
                     cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
 
                     cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
                     cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
                     
-                    cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+                    cJSON * userid   = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
 
+                    if (postid && cJSON_IsString(postid)) {
+                        wcscpy(posts[i].postId, charToWchar(postid->valuestring));
+                    } else {
+                        posts[i].postId[0] = '\0';
+                    }
                     if (created && cJSON_IsString(created)) {
                         wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
                     } else
@@ -158,15 +167,16 @@ int accessPublicTimeline(wchar_t * server) {
                     else
                         posts[i].username[0] = '\0';
 
-                    if (id && cJSON_IsString(id))
-                        wcscpy(posts[i].id, charToWchar(id->valuestring));
+                    if (userid && cJSON_IsString(userid))
+                        wcscpy(posts[i].userId, charToWchar(userid->valuestring));
                     else
-                        posts[i].id[0] = '\0';
-
+                        posts[i].userId[0] = '\0';
+                        
+                    posts[i].postId[32 - 1]     = '\0';
                     posts[i].createdAt[MAX_STR - 1]  = '\0';
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
-                    posts[i].id[MAX_STR - 1]         = '\0';
+                    posts[i].userId[MAX_STR - 1]     = '\0';
                     
                     i++;
                 }
@@ -208,17 +218,17 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
             if (json) {
                 cJSON * id = cJSON_GetObjectItemCaseSensitive(json, "id");
 
-                cJSON * username  = cJSON_GetObjectItemCaseSensitive(json, "username");
+                cJSON * username      = cJSON_GetObjectItemCaseSensitive(json, "username");
                 cJSON * display_name  = cJSON_GetObjectItemCaseSensitive(json, "display_name");
 
-                cJSON * created_at  = cJSON_GetObjectItemCaseSensitive(json, "created_at");
-                cJSON * note = cJSON_GetObjectItemCaseSensitive(json, "note");
+                cJSON * created_at    = cJSON_GetObjectItemCaseSensitive(json, "created_at");
+                cJSON * note          = cJSON_GetObjectItemCaseSensitive(json, "note");
 
-                cJSON * avatar_url = cJSON_GetObjectItemCaseSensitive(json, "avatar");
-                cJSON * banner_url = cJSON_GetObjectItemCaseSensitive(json, "header");
+                cJSON * avatar_url    = cJSON_GetObjectItemCaseSensitive(json, "avatar");
+                cJSON * banner_url    = cJSON_GetObjectItemCaseSensitive(json, "header");
 
-                cJSON * following = cJSON_GetObjectItemCaseSensitive(json, "following_count");
-                cJSON * followers = cJSON_GetObjectItemCaseSensitive(json, "followers_count");
+                cJSON * following     = cJSON_GetObjectItemCaseSensitive(json, "following_count");
+                cJSON * followers     = cJSON_GetObjectItemCaseSensitive(json, "followers_count");
 
                 wcscpy(account.id, charToWchar(id->valuestring));
                 wcscpy(account.username, charToWchar(username->valuestring));
@@ -238,7 +248,75 @@ int accessPublicAccount(wchar_t * server, wchar_t * id) {
     return 0;
 }
 
+int accessPublicPost(wchar_t * server, wchar_t * id) {
 
+    CURL * curl = curl_easy_init();
+
+    if (curl) {
+        resetMemory(&data);
+
+        createEndpoint(server, L"/api/v1/statuses/", id);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
+
+        //TODO: do a while, while the curl performs failed and the user clicks retry
+        //while
+        
+        CURLcode result = curl_easy_perform(curl);
+
+        if (result != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+            MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
+        } else {
+            cJSON * root = cJSON_Parse(data.response);
+
+            printf("\n\nServer response:\n%s\n", data.response);
+
+            if (root == NULL) {
+                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
+            } else {
+
+                cJSON * item      = NULL;
+
+                cJSON * replies   = cJSON_GetObjectItemCaseSensitive(root, "replies_count");
+                cJSON * reblogs   = cJSON_GetObjectItemCaseSensitive(root, "reblogs_count");
+                cJSON * favorites = cJSON_GetObjectItemCaseSensitive(root, "favourites_count");
+                cJSON * reactions = cJSON_GetObjectItemCaseSensitive(root, "reactions_count");
+                                
+                if (replies) {
+                    posts[postNum].repliesCount = replies->valueint;
+                } else
+                    posts[postNum].repliesCount = 0;
+
+                if (reblogs)
+                    posts[postNum].reblogsCount = reblogs->valueint;
+                else
+                    posts[postNum].reblogsCount = 0;
+
+                if (favorites)
+                    posts[postNum].favouritesCount = favorites->valueint;
+                else
+                    posts[postNum].favouritesCount = 0;
+
+                if (reactions)
+                    posts[postNum].reactionsCount = reactions->valueint;
+                else
+                    posts[postNum].reactionsCount = 0;
+
+            }
+        }
+            
+        curl_easy_cleanup(curl);
+    }
+
+    //resetMemory(&data);
+
+    return 0;
+}
 
 int createApplication(wchar_t * server) {
     CURL * curl = curl_easy_init();
@@ -248,7 +326,7 @@ int createApplication(wchar_t * server) {
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
 
-        //#if LIBCURL_VERSION_NUM >= 0x073800
+        #if LIBCURL_VERSION_NUM >= 0x073800
             curl_mime * mime = curl_mime_init(curl);
 
             curl_mimepart * part = curl_mime_addpart(mime);
@@ -264,7 +342,7 @@ int createApplication(wchar_t * server) {
             curl_mime_data(part, "read write push", CURL_ZERO_TERMINATED);
 
             curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
-        /*#else
+        #else
             struct curl_httppost * formpost = NULL;
             struct curl_httppost * lastptr = NULL;
 
@@ -284,7 +362,7 @@ int createApplication(wchar_t * server) {
                         CURLFORM_END);
 
             curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
-        #endif*/
+        #endif
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
@@ -329,10 +407,10 @@ int getAccessToken(wchar_t * server) {
         createEndpoint(server, L"/oauth/token", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
-        //#if LIBCURL_VERSION_NUM >= 0x073800
+        #if LIBCURL_VERSION_NUM >= 0x073800
             curl_mime * mime = curl_mime_init(curl);
 
             curl_mimepart * part = curl_mime_addpart(mime);
@@ -348,7 +426,7 @@ int getAccessToken(wchar_t * server) {
             curl_mime_data(part, "client_credentials", CURL_ZERO_TERMINATED);
 
             curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
-        /*#else
+        #else
             struct curl_httppost * formpost = NULL;
             struct curl_httppost * lastptr = NULL;
 
@@ -368,7 +446,7 @@ int getAccessToken(wchar_t * server) {
                         CURLFORM_END);
 
             curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
-        #endif*/
+        #endif
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk2);
@@ -411,7 +489,7 @@ int verifyCredentials(wchar_t * server) {
         createEndpoint(server, L"/api/v1/apps/verify_credentials", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         
         char header_string[512];
 
@@ -505,7 +583,7 @@ int getUserToken(wchar_t * server) {
         createEndpoint(server, L"/oauth/token", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
         struct curl_slist * headers = NULL;
@@ -568,7 +646,7 @@ int getUserProfile(wchar_t * server) {
         createEndpoint(server, L"/api/v1/accounts/verify_credentials", NULL);
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         
         char header_string[512];
 
@@ -634,7 +712,7 @@ int accessUserTimeline(wchar_t * server) {
         createEndpoint(server, L"/api/v1/timelines/home", L"?limit=40");
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
         char header_string[512];
         snprintf(header_string, sizeof(header_string), "Authorization: Bearer %ls", user_token);
@@ -676,13 +754,15 @@ int accessUserTimeline(wchar_t * server) {
                     if (i >= MAX_POSTS)
                         break;
 
+                    cJSON * postid  = cJSON_GetObjectItemCaseSensitive(item, "id");
+
                     cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
                     cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
 
                     cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
                     cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
                     
-                    cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+                    cJSON * userid = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
 
                     cJSON * reblog  = cJSON_GetObjectItemCaseSensitive(item, "reblog");
 
@@ -690,6 +770,11 @@ int accessUserTimeline(wchar_t * server) {
                         posts[i].reblog = TRUE;
                     else
                         posts[i].reblog = FALSE;
+
+                    if (postid && cJSON_IsString(postid)) {
+                        wcscpy(posts[i].postId, charToWchar(postid->valuestring));
+                    } else
+                        posts[i].postId[0] = '\0';
 
                     if (created && cJSON_IsString(created)) {
                         wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
@@ -706,15 +791,15 @@ int accessUserTimeline(wchar_t * server) {
                     else
                         posts[i].username[0] = '\0';
 
-                    if (id && cJSON_IsString(id))
-                        wcscpy(posts[i].id, charToWchar(id->valuestring));
+                    if (userid && cJSON_IsString(userid))
+                        wcscpy(posts[i].userId, charToWchar(userid->valuestring));
                     else
-                        posts[i].id[0] = '\0';
+                        posts[i].userId[0] = '\0';
 
                     posts[i].createdAt[MAX_STR - 1]  = '\0';
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
-                    posts[i].id[MAX_STR - 1]         = '\0';
+                    posts[i].userId[MAX_STR - 1]     = '\0';
                     
                     i++;
                 }
@@ -741,7 +826,7 @@ int accessLocalTimeline(wchar_t * server) {
         createEndpoint(server, L"/api/v1/timelines/public", L"?local=true&limit=40");
         curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
         curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
         char header_string[512];
         snprintf(header_string, sizeof(header_string), "Authorization: Bearer %ls", user_token);
@@ -783,6 +868,8 @@ int accessLocalTimeline(wchar_t * server) {
                     if (i >= MAX_POSTS)
                         break;
 
+                    cJSON * postid  = cJSON_GetObjectItemCaseSensitive(item, "id");
+
                     cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
                     cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
 
@@ -797,6 +884,11 @@ int accessLocalTimeline(wchar_t * server) {
                         posts[i].reblog = TRUE;
                     else
                         posts[i].reblog = FALSE;
+
+                    if (postid && cJSON_IsString(postid)) {
+                        wcscpy(posts[i].postId, charToWchar(postid->valuestring));
+                    } else
+                        posts[i].postId[0] = '\0';
 
                     if (created && cJSON_IsString(created)) {
                         wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
@@ -814,14 +906,14 @@ int accessLocalTimeline(wchar_t * server) {
                         posts[i].username[0] = '\0';
 
                     if (id && cJSON_IsString(id))
-                        wcscpy(posts[i].id, charToWchar(id->valuestring));
+                        wcscpy(posts[i].userId, charToWchar(id->valuestring));
                     else
-                        posts[i].id[0] = '\0';
+                        posts[i].userId[0] = '\0';
 
                     posts[i].createdAt[MAX_STR - 1]  = '\0';
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
-                    posts[i].id[MAX_STR - 1]         = '\0';
+                    posts[i].userId[MAX_STR - 1]     = '\0';
                     
                     i++;
                 }

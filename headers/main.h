@@ -13,11 +13,13 @@ struct Image {
 HBITMAP CreateHbitmapFromPixels(unsigned char * pixels, int srcW, int srcH, int dstW, int dstH);
 
 void createAccountWindow();
+void createPostWindow();
 
 LRESULT CALLBACK MainWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 LRESULT CALLBACK InstanceWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 LRESULT CALLBACK CodeWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
+LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 
 int preparingApplication();
 int checkVersion();

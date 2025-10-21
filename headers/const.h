@@ -45,11 +45,15 @@
 
 #define IDB_CONTINUE_I                       4000
 #define IDB_CANCEL_I                         4001
+
 #define IDB_CONTINUE_C                       4002
 #define IDB_CANCEL_C                         4003
+
 #define IDB_OK_A                             4004
 #define IDB_FOLLOW_A                         4005
 
+#define IDB_CLOSE_P                          4006
+#define IDB_MORE_P                           4007
 
 #define IDE_INSTANCE_I                       4100
 #define IDE_INSTANCE_C                       4101
@@ -62,6 +66,7 @@
 
 
 #define IDP_AVATAR_M                         4300
+
 #define IDP_BANNER_A                         4301
 #define IDP_AVATAR_A                         4302
 

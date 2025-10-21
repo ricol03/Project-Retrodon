@@ -2,23 +2,27 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "headers/stb_image.h"
 
-//TODO: do i686 compilation
 //TODO: solve ram leak
 
 BOOL loggedIn = FALSE;
 extern BOOL createdApplication;
+extern BOOL runningCodeDialog;
+BOOL clickedUserProfile = FALSE;
+
 
 const LPCWSTR MAIN_CLASS           = L"MainWndClass";
 const LPCWSTR INSTANCE_CLASS       = L"InstanceWndClass";
 const LPCWSTR ACCOUNT_CLASS        = L"AccountWndClass";
 const LPCWSTR CODE_CLASS           = L"CodeWndClass";
+const LPCWSTR POST_CLASS           = L"PostWndClass";
 
 // window handles
 // 0 - main window
 // 1 - instance dialog
-// 2 - account dialog
+// 2 - account window
 // 3 - code dialog
-HWND hwindow[4];
+// 4 - post window
+HWND hwindow[5];
 
 // main window controls
 
@@ -29,6 +33,8 @@ HWND hinstance_edit, hinstance_title, hinstance_subtitle, hinstance_button;
 extern HWND hfollow_button, hfollowing_static, hfollowers_static, hdisplayname_static, hname_static, hnote_static, havatar_area, hbanner_area, hok_button;
 
 extern HWND hcodeControls[12];
+
+extern HWND hpostControls[12];
 
 PAINTSTRUCT ps;
 
@@ -53,10 +59,8 @@ Image banner;
 extern char public_token[512];
 extern wchar_t user_token[128];
 
-extern BOOL runningCodeDialog;
 
-BOOL clickedUserProfile = FALSE;
-
+int postNum = 0;
 
 
 //TODO: could do a separate file for dialog windows 
@@ -153,6 +157,8 @@ int preparingApplication() {
     icex.dwICC = ICC_LISTVIEW_CLASSES;
     InitCommonControlsEx(&icex);
 
+    checkVersion();
+
     createDirectory();
 
     if (readSecrets())
@@ -209,8 +215,6 @@ int preparingApplication() {
         }
     }
 
-    checkVersion();
-
     return 1;
 }
 
@@ -234,6 +238,28 @@ void createAccountWindow() {
         MessageBox(NULL, L"Unable to create window", 
                 L"Error", MB_ICONERROR | MB_OK);
         //return 0;
+    }
+}
+
+void createPostWindow() {
+    hwindow[4] = CreateWindowEx(
+        0,
+        POST_CLASS,
+        L"Post",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        (GetSystemMetrics(SM_CXSCREEN) / 2) - 200, (GetSystemMetrics(SM_CYSCREEN) / 2) - 90, 600, 400,
+        NULL,
+        NULL,
+        glhinstance,
+        NULL
+    );
+    
+    if (hwindow[4] == NULL) {
+        wchar_t error[512];
+        swprintf(error, 512, L"Error: %lu", GetLastError());
+        MessageBox(NULL, error, L"Error", MB_ICONERROR);
+        MessageBox(NULL, L"Unable to create window", 
+                L"Error", MB_ICONERROR | MB_OK);
     }
 }
 
@@ -326,6 +352,18 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
         }
         #pragma endregion
 
+        #pragma region PostWindow
+        WNDCLASS postwindowclass = { 0 };
+
+        postwindowclass.style            = CS_OWNDC;
+        postwindowclass.lpfnWndProc      = PostWindowProc;
+        postwindowclass.hInstance        = glhinstance;
+        postwindowclass.lpszClassName    = (LPCWSTR)POST_CLASS;
+
+        RegisterClass(&postwindowclass);
+
+        #pragma endregion
+
     }   
 
     MSG msg = { 0 };
@@ -367,6 +405,8 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
         case WM_NOTIFY: {
             LPNMHDR pnmh = (LPNMHDR)lparam;
+            int g_selectedSubItem = -1;
+            int g_selectedItem = -1;
 
             switch (pnmh->code) {
                 case WM_VSCROLL: {
@@ -386,20 +426,28 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                 }
 
-
                 case NM_DBLCLK: {
                     LPNMITEMACTIVATE pia = (LPNMITEMACTIVATE)lparam;
 
                     // index of the selected item
                     int iItem = pia->iItem;
-                    if (iItem >= 0) {
-                        wchar_t buffer[MAX_STR];
-                        ListView_GetItemText(pia->hdr.hwndFrom, iItem, 3, buffer, MAX_STR);
+                    int iSubItem = pia->iSubItem;
 
-                        accessPublicAccount(serverAddress, buffer);
+                    if (iItem >= 0 && iSubItem >= 0) {
+                        switch (iSubItem) {
+                            case 0:
+                                accessPublicAccount(serverAddress, posts[iItem].userId);
+                                createAccountWindow();
+                                break;
+                            
+                            case 1:
+                                postNum = iItem;
+                                createPostWindow();
+                                break;
 
-                        createAccountWindow();
-
+                            default:
+                                break;
+                        }
                     }
                     break;
                 }
@@ -418,13 +466,35 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].content;
                             else if (col == 1 && posts[plvdi->item.iItem].reblog == TRUE)
                                 plvdi->item.pszText = (LPWSTR)L"(Reblogged post)";
-                            else if (col == 2)
+                            else
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].createdAt;
-                            else 
-                                plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].id;
                         }
                     }
                 }
+            
+                /*case NM_CLICK: {
+                    LPNMITEMACTIVATE nmItem = (LPNMITEMACTIVATE)lparam;
+                    g_selectedSubItem = nmItem->iSubItem;
+                    InvalidateRect(pnmh->hwndFrom, NULL, TRUE);
+                    break;
+                }
+
+                case NM_CUSTOMDRAW: {
+                    LPNMLVCUSTOMDRAW cd = (LPNMLVCUSTOMDRAW)lparam;
+                    switch (cd->nmcd.dwDrawStage) {
+                    case CDDS_PREPAINT:
+                        return CDRF_NOTIFYITEMDRAW;
+
+                    case CDDS_ITEMPREPAINT:
+                        return CDRF_NOTIFYSUBITEMDRAW;
+
+                    case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
+                        if (cd->iSubItem == g_selectedSubItem) {
+                            cd->clrTextBk = RGB(200, 220, 255); // light blue
+                        }
+                        return CDRF_DODEFAULT;
+                    }
+                }*/
             }
         }
         break;
@@ -623,7 +693,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 break;
 
                 case IDM_ABOUT_ABOUT: {
-                    MessageBox(hwindow[0], L"Project Retrodon: version 0.1\nAuthor: ricol03", L"About", MB_OK);
+                    MessageBox(hwindow[0], L"Project Retrodon: version 0.1-dev\nAuthor: ricol03", L"About", MB_OK);
                 }
                 break;
             }
@@ -868,7 +938,82 @@ LRESULT CALLBACK CodeWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
     return DefWindowProc(hwnd, message, wparam, lparam);
 }
 
-// old code from another project; might verify Windows version or not
+LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+    switch(message) {
+        case WM_CREATE: {
+            postWindow(hwnd);
+
+            accessPublicPost(serverAddress, posts[postNum].postId);
+
+            wchar_t poster[64];
+            swprintf(poster, sizeof(poster), L"Post by: %ls", posts[postNum].username);
+
+            wchar_t replies[32];
+            swprintf(replies, sizeof(replies), L"Comments: %d", posts[postNum].repliesCount);
+
+            wchar_t favourites[32];
+            swprintf(favourites, sizeof(favourites), L"Favourites: %d", posts[postNum].favouritesCount);
+
+            wchar_t reblogs[32];
+            swprintf(reblogs, sizeof(reblogs), L"Boosts: %d", posts[postNum].reblogsCount);
+
+            SendMessage(hpostControls[1], WM_SETTEXT, 0, (LPARAM)poster);
+            SendMessage(hpostControls[4], WM_SETTEXT, 0, (LPARAM)posts[postNum].content);
+            SendMessage(hpostControls[5], WM_SETTEXT, 0, (LPARAM)replies);
+            SendMessage(hpostControls[6], WM_SETTEXT, 0, (LPARAM)favourites);
+            SendMessage(hpostControls[7], WM_SETTEXT, 0, (LPARAM)reblogs);
+            //SendMessage(hpostControls[9], WM_SETTEXT, 0, )
+
+            return 0;
+        }
+
+        case WM_COMMAND: {
+            switch(LOWORD(wparam)) {
+                case IDB_CLOSE_P: {
+                    ShowWindow(hwnd, SW_HIDE);
+                    DestroyWindow(hwnd);
+                    break;
+                }
+
+                case IDB_MORE_P: {
+                    
+                    HMENU hbuttonmenu = CreatePopupMenu();
+                    AppendMenu(hbuttonmenu, MF_STRING | MF_DISABLED, 12, L"Test");
+                    AppendMenu(hbuttonmenu, MF_STRING | MF_DISABLED, 12, L"Test");
+
+                    RECT rc;
+                    GetWindowRect(GetDlgItem(hwnd, IDB_MORE_P), &rc);
+
+                    TrackPopupMenu(
+                        hbuttonmenu,
+                        TPM_LEFTALIGN | TPM_TOPALIGN,
+                        rc.left,
+                        rc.top - 40,
+                        0,
+                        hwnd,
+                        NULL
+                    );
+
+                    break;
+                }
+            }
+            return 0;
+        }   
+
+        case WM_PAINT: {
+            HDC hdc = BeginPaint(hwnd, &ps);
+            FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_3DFACE+1));
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+
+        case WM_CLOSE:
+        case WM_DESTROY:
+            return 0;
+    }
+
+    return DefWindowProc(hwnd, message, wparam, lparam);
+}
 
 int checkVersion() {
     wversion = GetVersion();
@@ -876,13 +1021,9 @@ int checkVersion() {
     wmajorversion = (DWORD)(LOBYTE(LOWORD(wversion)));
     wminorversion = (DWORD)(HIBYTE(LOWORD(wversion)));
 
-    /*char version[64];
-    snprintf(version, sizeof(version), "Windows version: %d.%d", wmajorversion, wminorversion);*/
-
-    if (wmajorversion >= 5 && wmajorversion < 11) {
-        //MessageBox(NULL, version, "Info", MB_ICONINFORMATION);
+    if (wmajorversion >= 4 && wmajorversion < 11)
         return 0;
-    } else if (wmajorversion < 5) {
+    else if (wmajorversion < 4) {
         MessageBox(NULL, L"This program only runs on Windows 2000 and later.", L"Error", MB_ICONERROR);
         return 1;
     } else {

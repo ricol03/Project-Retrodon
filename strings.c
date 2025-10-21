@@ -59,3 +59,36 @@ char * wcharToChar(const wchar_t *src) {
 
     return dest;
 }
+
+char * linkShortener(char * string) {
+    char * dest = malloc(sizeof(char) * MAX_STR);
+    char * pointer_string_start;
+    char * point_start = dest;
+    boolean link;
+
+    /*while (*string) {
+        if (*string == 'h') {
+            pointer_string_start = *string;
+
+            if (*++string == 't' && *++string == 't' && *++string == 'p')
+                link = TRUE;
+            else {
+                *string = pointer_string_start;
+                *dest++ = *string;
+            }
+            
+        } else if (*string == '/') {
+            link = FALSE;
+        } else if (!link) {
+            *dest++ = *string;
+        }
+        string++;
+    }*/
+
+    //point *dest back to the start of the string
+    dest = point_start;
+
+    //free(point_start);
+
+    return dest;
+}

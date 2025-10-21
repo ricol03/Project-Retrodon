@@ -29,7 +29,7 @@ void createDirectory() {
         if (checkDirectory(appdata)) {
             BOOL check = CreateDirectory((LPCWSTR)appdata, NULL);
 
-            if (check == 0) {
+            if (check == 1) {
                 MessageBox(NULL, L"The folder could not be created", L"Error", MB_ICONERROR);
                 printf("\n\nGetLastError: %lu\n\n", GetLastError());
             }
@@ -169,7 +169,10 @@ int readSettings() {
     } else
         MessageBox(NULL, L"Settings not found", L"Error", MB_ICONERROR);
     
-    fclose(fr);
+
+    MessageBox(NULL, L"Settinfdsfsdfsfgs not found", L"Error", MB_ICONERROR);
+
+    //fclose(fr);
     return 0;
 }
 

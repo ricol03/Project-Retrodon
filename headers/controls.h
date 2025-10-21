@@ -10,5 +10,6 @@ int homeWindow(HWND hwnd);
 int instanceWindow(HWND hwnd);
 int accountWindow(HWND hwnd);
 int codeWindow(HWND hwnd);
+int postWindow(HWND hwnd);
 
 #endif

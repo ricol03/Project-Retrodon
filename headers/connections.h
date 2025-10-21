@@ -12,11 +12,16 @@ struct Memory {
 } typedef Memory;
 
 struct Post {
+    wchar_t postId[32];
     wchar_t createdAt[MAX_STR];
     wchar_t content[MAX_STR];
     wchar_t username[MAX_STR];
-    wchar_t id[MAX_STR];
+    wchar_t userId[MAX_STR];
     boolean reblog;
+    int repliesCount;
+    int reblogsCount;
+    int favouritesCount;
+    int reactionsCount;
 } typedef Post;
 
 struct Account {
@@ -43,6 +48,7 @@ void resetAccount(Account * account);
 
 int accessPublicTimeline(wchar_t * server);
 int accessPublicAccount(wchar_t * server, wchar_t * id);
+int accessPublicPost(wchar_t * server, wchar_t * id);
 
 int createApplication(wchar_t * server);
 int getAccessToken(wchar_t * server);

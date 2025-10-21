@@ -18,8 +18,13 @@
 #include <wchar.h>
 
 //library headers
+#ifdef I386
+    #include "/home/ricol03/porrameu/curl-w32/include/curl/curl.h"
+#else
+    #include "../curl/include/curl/curl.h"
+#endif
+
 #include "../cjson/cJSON.h"
-#include "../curl/include/curl/curl.h"
 #include "stb_image.h"
 
 //file headers
