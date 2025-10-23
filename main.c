@@ -364,6 +364,15 @@ int WINAPI wWinMain(HINSTANCE hinstance, HINSTANCE hprevinstance, PWSTR lpcmdlin
 
         #pragma endregion
 
+        #pragma region ChildPostWindow
+
+        WNDCLASS childpostwindowclass = { 0 };
+        childpostwindowclass.lpfnWndProc = ChildPostWndProc;
+        childpostwindowclass.hInstance = glhinstance;
+        childpostwindowclass.lpszClassName = L"ChildScrollClass";
+        RegisterClass(&childpostwindowclass);
+
+        #pragma endregion
     }   
 
     MSG msg = { 0 };
@@ -462,10 +471,12 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
                             if (col == 0)
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].username;
-                            else if (col == 1 && posts[plvdi->item.iItem].reblog == FALSE)
+                            /*else if (col == 1 && posts[plvdi->item.iItem].reblog == FALSE)
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].content;
                             else if (col == 1 && posts[plvdi->item.iItem].reblog == TRUE)
-                                plvdi->item.pszText = (LPWSTR)L"(Reblogged post)";
+                                plvdi->item.pszText = (LPWSTR)L"(Reblogged post)";*/
+                            else if (col == 1)
+                                plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].content;
                             else
                                 plvdi->item.pszText = (LPWSTR)posts[plvdi->item.iItem].createdAt;
                         }
@@ -866,6 +877,7 @@ LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARA
             }
             
             
+            
         }
 
         case WM_COMMAND:
@@ -941,12 +953,33 @@ LRESULT CALLBACK CodeWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
 LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
     switch(message) {
         case WM_CREATE: {
+
             postWindow(hwnd);
 
             accessPublicPost(serverAddress, posts[postNum].postId);
 
+            accessPublicAccount(serverAddress, posts[postNum].userId);
+
+            getImage(account.avatarUrl);
+
+            avatar.pixels = stbi_load_from_memory(
+                imageData.response, imageData.size, &avatar.width, &avatar.height, &avatar.channels, 4);
+
+            free(imageData.response);
+
+            HBITMAP hbmpavatar = CreateHbitmapFromPixels(avatar.pixels, avatar.width, avatar.height, 58, 58);
+
+            if (hbmpavatar) {
+                SendMessage(hpostControls[3], STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
+            } else {
+                MessageBox(NULL, L"Avatar cannot be shown", L"Error", MB_ICONERROR);
+            }
+
             wchar_t poster[64];
             swprintf(poster, sizeof(poster), L"Post by: %ls", posts[postNum].username);
+
+            wchar_t date[32];
+            swprintf(date, sizeof(date), L"Date: %ls", posts[postNum].createdAt);
 
             wchar_t replies[32];
             swprintf(replies, sizeof(replies), L"Comments: %d", posts[postNum].repliesCount);
@@ -957,12 +990,23 @@ LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
             wchar_t reblogs[32];
             swprintf(reblogs, sizeof(reblogs), L"Boosts: %d", posts[postNum].reblogsCount);
 
-            SendMessage(hpostControls[1], WM_SETTEXT, 0, (LPARAM)poster);
-            SendMessage(hpostControls[4], WM_SETTEXT, 0, (LPARAM)posts[postNum].content);
-            SendMessage(hpostControls[5], WM_SETTEXT, 0, (LPARAM)replies);
-            SendMessage(hpostControls[6], WM_SETTEXT, 0, (LPARAM)favourites);
-            SendMessage(hpostControls[7], WM_SETTEXT, 0, (LPARAM)reblogs);
-            //SendMessage(hpostControls[9], WM_SETTEXT, 0, )
+            wchar_t visibility[32];
+            swprintf(visibility, sizeof(visibility), L"Visibility: %ls", posts[postNum].visibility);
+
+            wchar_t language[32];
+            swprintf(language, sizeof(language), L"Language: %ls", posts[postNum].language);
+
+            SendMessage(hpostControls[1] , WM_SETTEXT, 0, (LPARAM)poster);
+            SendMessage(hpostControls[2] , WM_SETTEXT, 0, (LPARAM)date);
+            SendMessage(hpostControls[4] , WM_SETTEXT, 0, (LPARAM)posts[postNum].content);
+            SendMessage(hpostControls[5] , WM_SETTEXT, 0, (LPARAM)replies);
+            SendMessage(hpostControls[6] , WM_SETTEXT, 0, (LPARAM)favourites);
+            SendMessage(hpostControls[7] , WM_SETTEXT, 0, (LPARAM)reblogs);
+            SendMessage(hpostControls[9] , WM_SETTEXT, 0, (LPARAM)visibility);
+            SendMessage(hpostControls[10], WM_SETTEXT, 0, (LPARAM)language);
+
+            MessageBox(NULL, posts[postNum].content, L"Info", MB_OK);
+            printf("%ls", posts[postNum].content);
 
             return 0;
         }
@@ -978,8 +1022,8 @@ LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
                 case IDB_MORE_P: {
                     
                     HMENU hbuttonmenu = CreatePopupMenu();
-                    AppendMenu(hbuttonmenu, MF_STRING | MF_DISABLED, 12, L"Test");
-                    AppendMenu(hbuttonmenu, MF_STRING | MF_DISABLED, 12, L"Test");
+                    AppendMenu(hbuttonmenu, MF_STRING | MF_GRAYED, 12, L"Test");
+                    AppendMenu(hbuttonmenu, MF_STRING | MF_GRAYED, 12, L"Test");
 
                     RECT rc;
                     GetWindowRect(GetDlgItem(hwnd, IDB_MORE_P), &rc);
@@ -995,6 +1039,11 @@ LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
                     );
 
                     break;
+                }
+
+                case IDP_AVATAR_P: {
+                    if (HIWORD(wparam) == STN_CLICKED)
+                        createAccountWindow();
                 }
             }
             return 0;
@@ -1031,3 +1080,54 @@ int checkVersion() {
         return 1;
     }
 }
+
+
+
+LRESULT CALLBACK ChildPostWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+    static int scrollPos = 0;
+
+    switch (msg) {
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+
+            for (int i = 0; i < 50; i++) {
+                TextOut(hdc, 10, i * 20 - scrollPos, L"Line of text", 13);
+            }
+
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+
+        case WM_VSCROLL: {
+            SCROLLINFO si = { sizeof(SCROLLINFO), SIF_ALL };
+            GetScrollInfo(hwnd, SB_VERT, &si);
+            int pos = si.nPos;
+
+            switch (LOWORD(wparam)) {
+            case SB_LINEUP:   si.nPos -= 20; break;
+            case SB_LINEDOWN: si.nPos += 20; break;
+            case SB_THUMBTRACK: si.nPos = si.nTrackPos; break;
+            }
+
+            SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+            GetScrollInfo(hwnd, SB_VERT, &si);
+            scrollPos = si.nPos;
+            InvalidateRect(hwnd, NULL, TRUE);
+            return 0;
+        }
+
+        case WM_SIZE: {
+            SCROLLINFO si = { sizeof(SCROLLINFO), SIF_RANGE | SIF_PAGE };
+            si.nMin = 0;
+            si.nMax = 1000;  // total content height
+            si.nPage = HIWORD(lparam);
+            SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+            return 0;
+        }
+
+    }
+
+    return DefWindowProc(hwnd, msg, wparam, lparam);
+}
+

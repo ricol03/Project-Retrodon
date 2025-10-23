@@ -40,7 +40,7 @@ HWND hcodeControls[12];
 // 7 - boosts static
 // 8 - more button
 // 9 - visibility static
-HWND hpostControls[10];
+HWND hpostControls[12];
 
 //fonts
 //0 - title font
@@ -541,7 +541,7 @@ int postWindow(HWND hwnd) {
         WC_STATIC,
         L"Date ",
         WS_VISIBLE | WS_CHILD,
-        rc.left + 80, rc.top + 30, 165, 30,
+        rc.right - 220, rc.top + 10, 200, 30,
         hwnd,
         (HMENU) 54552,
         GetModuleHandle(NULL),
@@ -551,10 +551,10 @@ int postWindow(HWND hwnd) {
     hpostControls[3] = CreateWindow(
         WC_STATIC,
         L"",
-        SS_BITMAP | WS_VISIBLE | WS_CHILD,
-        rc.left + 10, rc.top + 10, 65, 30,
+        SS_BITMAP | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+        rc.left + 10, rc.top + 10, 58, 58,
         hwnd,
-        (HMENU) 54553,
+        (HMENU) IDP_AVATAR_P,
         GetModuleHandle(NULL),
         NULL
     );
@@ -629,12 +629,29 @@ int postWindow(HWND hwnd) {
         WC_STATIC,
         L"Language ",
         WS_VISIBLE | WS_CHILD,
-        rc.left + 80, rc.top + 30, 165, 30,
+        rc.right - 220, rc.top + 30, 165, 30,
         hwnd,
-        (HMENU) 54558,
+        (HMENU) 54559,
         GetModuleHandle(NULL),
         NULL
     );
+
+    /*hpostControls[11] = CreateWindowEx(
+        WC_STATIC,
+        L"Language ",
+        WS_VISIBLE | WS_CHILD,
+        rc.right - 220, rc.top + 30, 165, 30,
+        hwnd,
+        (HMENU) 54560,
+        GetModuleHandle(NULL),
+        NULL
+    );*/
+
+    hpostControls[11] = CreateWindowEx(
+            0, L"ChildScrollClass", NULL,
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL,
+            0, 50, 0, 0, // x, y, width, height set in WM_SIZE
+            hwnd, (HMENU)55555, GetModuleHandle(NULL), NULL);
 
     SendMessage(hpostControls[0], WM_SETFONT, (WPARAM)hfont[1], TRUE);
     SendMessage(hpostControls[1], WM_SETFONT, (WPARAM)hfont[1], TRUE);

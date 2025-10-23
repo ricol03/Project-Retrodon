@@ -137,15 +137,17 @@ int accessPublicTimeline(wchar_t * server) {
                     if (i >= MAX_POSTS)
                         break;
 
-                    cJSON * postid   = cJSON_GetObjectItemCaseSensitive(item, "id");
+                    cJSON * postid     = cJSON_GetObjectItemCaseSensitive(item, "id");
 
-                    cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
-                    cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
+                    cJSON * created    = cJSON_GetObjectItemCaseSensitive(item, "created_at");
+                    cJSON * content    = cJSON_GetObjectItemCaseSensitive(item, "content");
 
-                    cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
-                    cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
+                    cJSON * account    = cJSON_GetObjectItemCaseSensitive(item, "account");
+                    cJSON * username   = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
                     
-                    cJSON * userid   = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+                    cJSON * userid     = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+
+                    cJSON * visibility = cJSON_GetObjectItemCaseSensitive(item, "visibility");
 
                     if (postid && cJSON_IsString(postid)) {
                         wcscpy(posts[i].postId, charToWchar(postid->valuestring));
@@ -171,12 +173,18 @@ int accessPublicTimeline(wchar_t * server) {
                         wcscpy(posts[i].userId, charToWchar(userid->valuestring));
                     else
                         posts[i].userId[0] = '\0';
+
+                    if (visibility && cJSON_IsString(visibility))
+                        wcscpy(posts[i].visibility, charToWchar(visibility->valuestring));
+                    else
+                        posts[i].visibility[0] = '\0';
                         
                     posts[i].postId[32 - 1]     = '\0';
                     posts[i].createdAt[MAX_STR - 1]  = '\0';
                     posts[i].content[MAX_STR - 1]    = '\0';
                     posts[i].username[MAX_STR - 1]   = '\0';
                     posts[i].userId[MAX_STR - 1]     = '\0';
+                    posts[i].visibility[32 - 1]           = '\0';
                     
                     i++;
                 }
@@ -372,9 +380,7 @@ int createApplication(wchar_t * server) {
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
             MessageBox(NULL, L"Instance's info could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
-        } else {
-            MessageBox(NULL, L"Instance's info was retrieved", L"Info", MB_ICONINFORMATION | MB_OK);
-            
+        } else {            
             cJSON * json = cJSON_Parse(chunk.response);
 
             if (json == NULL) {
@@ -736,76 +742,8 @@ int accessUserTimeline(wchar_t * server) {
         } else {
             //printf("JSON: %s", data.response);
 
-            cJSON * root = cJSON_Parse(data.response);
-
-            if (root == NULL) {
-                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
-            } else {
-                if (!cJSON_IsArray(root)) {
-                    printf("Error: expected array of posts\n");
-                    return -1;
-                }
-
-                cJSON * item = NULL;
-                cJSON * reblog = NULL;
-                size_t i = 0;
-
-                cJSON_ArrayForEach(item, root) {
-                    if (i >= MAX_POSTS)
-                        break;
-
-                    cJSON * postid  = cJSON_GetObjectItemCaseSensitive(item, "id");
-
-                    cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
-                    cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
-
-                    cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
-                    cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
-                    
-                    cJSON * userid = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
-
-                    cJSON * reblog  = cJSON_GetObjectItemCaseSensitive(item, "reblog");
-
-                    if (reblog && cJSON_IsObject(reblog))
-                        posts[i].reblog = TRUE;
-                    else
-                        posts[i].reblog = FALSE;
-
-                    if (postid && cJSON_IsString(postid)) {
-                        wcscpy(posts[i].postId, charToWchar(postid->valuestring));
-                    } else
-                        posts[i].postId[0] = '\0';
-
-                    if (created && cJSON_IsString(created)) {
-                        wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
-                    } else
-                        posts[i].createdAt[0] = '\0';
-
-                    if (content && cJSON_IsString(content))
-                        wcscpy(posts[i].content, charToWchar(removeHtml(content->valuestring)));
-                    else
-                        posts[i].content[0] = '\0';
-
-                    if (username && cJSON_IsString(username))
-                        wcscpy(posts[i].username, charToWchar(username->valuestring));
-                    else
-                        posts[i].username[0] = '\0';
-
-                    if (userid && cJSON_IsString(userid))
-                        wcscpy(posts[i].userId, charToWchar(userid->valuestring));
-                    else
-                        posts[i].userId[0] = '\0';
-
-                    posts[i].createdAt[MAX_STR - 1]  = '\0';
-                    posts[i].content[MAX_STR - 1]    = '\0';
-                    posts[i].username[MAX_STR - 1]   = '\0';
-                    posts[i].userId[MAX_STR - 1]     = '\0';
-                    
-                    i++;
-                }
-
-                cJSON_Delete(root);
-            }
+            
+            postsLoop();
         }
             
         curl_easy_cleanup(curl);
@@ -838,94 +776,126 @@ int accessLocalTimeline(wchar_t * server) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
 
-        //TODO: do a while, while the curl performs failed and the user clicks retry
-        /*while ()
-        {}*/
-
         CURLcode result = curl_easy_perform(curl);
 
         if (result != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
             MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
-        } else {
-            //printf("JSON: %s", data.response);
-
-            cJSON * root = cJSON_Parse(data.response);
-
-            if (root == NULL) {
-                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
-            } else {
-                if (!cJSON_IsArray(root)) {
-                    printf("Error: expected array of posts\n");
-                    return -1;
-                }
-
-                cJSON * item = NULL;
-                cJSON * reblog = NULL;
-                size_t i = 0;
-
-                cJSON_ArrayForEach(item, root) {
-                    if (i >= MAX_POSTS)
-                        break;
-
-                    cJSON * postid  = cJSON_GetObjectItemCaseSensitive(item, "id");
-
-                    cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
-                    cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
-
-                    cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
-                    cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
-                    
-                    cJSON * id = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
-
-                    cJSON * reblog  = cJSON_GetObjectItemCaseSensitive(item, "reblog");
-
-                    if (reblog && cJSON_IsObject(reblog))
-                        posts[i].reblog = TRUE;
-                    else
-                        posts[i].reblog = FALSE;
-
-                    if (postid && cJSON_IsString(postid)) {
-                        wcscpy(posts[i].postId, charToWchar(postid->valuestring));
-                    } else
-                        posts[i].postId[0] = '\0';
-
-                    if (created && cJSON_IsString(created)) {
-                        wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
-                    } else
-                        posts[i].createdAt[0] = '\0';
-
-                    if (content && cJSON_IsString(content))
-                        wcscpy(posts[i].content, charToWchar(removeHtml(content->valuestring)));
-                    else
-                        posts[i].content[0] = '\0';
-
-                    if (username && cJSON_IsString(username))
-                        wcscpy(posts[i].username, charToWchar(username->valuestring));
-                    else
-                        posts[i].username[0] = '\0';
-
-                    if (id && cJSON_IsString(id))
-                        wcscpy(posts[i].userId, charToWchar(id->valuestring));
-                    else
-                        posts[i].userId[0] = '\0';
-
-                    posts[i].createdAt[MAX_STR - 1]  = '\0';
-                    posts[i].content[MAX_STR - 1]    = '\0';
-                    posts[i].username[MAX_STR - 1]   = '\0';
-                    posts[i].userId[MAX_STR - 1]     = '\0';
-                    
-                    i++;
-                }
-
-                cJSON_Delete(root);
-            }
-        }
-            
+        } else 
+            postsLoop();
+        
         curl_easy_cleanup(curl);
     }
 
     //resetMemory(&data);
 
     return 0;
+}
+
+
+/* posts loop */
+int postsLoop() {
+    cJSON * root = cJSON_Parse(data.response);
+
+    if (root == NULL) {
+        MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
+    } else {
+        if (!cJSON_IsArray(root)) {
+            printf("Error: expected array of posts\n");
+            return -1;
+        }
+
+        cJSON * item = NULL;
+        cJSON * reblog = NULL;
+        size_t i = 0;
+
+        cJSON_ArrayForEach(item, root) {
+            if (i >= MAX_POSTS)
+                break;
+
+            cJSON * postid  = cJSON_GetObjectItemCaseSensitive(item, "id");
+
+            cJSON * created  = cJSON_GetObjectItemCaseSensitive(item, "created_at");
+
+            cJSON * account  = cJSON_GetObjectItemCaseSensitive(item, "account");
+            cJSON * username = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
+            
+            cJSON * userid = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+
+            cJSON * reblog  = cJSON_GetObjectItemCaseSensitive(item, "reblog");
+
+            cJSON * visibility = cJSON_GetObjectItemCaseSensitive(item, "visibility");
+
+            cJSON * language = cJSON_GetObjectItemCaseSensitive(item, "language");
+
+
+            if (reblog && cJSON_IsObject(reblog))
+                posts[i].reblog = TRUE;
+            else
+                posts[i].reblog = FALSE;
+
+            if (posts[i].reblog) {
+                cJSON * reblogContent = reblog ? cJSON_GetObjectItemCaseSensitive(reblog, "content") : NULL;
+                cJSON * reblogAccount  = reblog ? cJSON_GetObjectItemCaseSensitive(reblog, "account") : NULL;
+                cJSON * reblogUsername = reblogAccount ? cJSON_GetObjectItemCaseSensitive(reblogAccount, "username") : NULL;
+
+                if (reblogContent && cJSON_IsString(reblogContent)) {
+
+                    wchar_t finalContent[MAX_STR];
+                    swprintf(finalContent, sizeof(finalContent), L"Reblogged from: %s\n%ls", reblogUsername->valuestring, charToWchar(removeHtml(reblogContent->valuestring)));
+
+                    wcscpy(posts[i].content, finalContent);
+                } else
+                    posts[i].content[0] = '\0';
+
+            } else {
+                cJSON * content  = cJSON_GetObjectItemCaseSensitive(item, "content");
+
+                if (content && cJSON_IsString(content))
+                    wcscpy(posts[i].content, charToWchar(removeHtml(content->valuestring)));
+                else
+                    posts[i].content[0] = '\0';
+            }
+
+            if (postid && cJSON_IsString(postid))
+                wcscpy(posts[i].postId, charToWchar(postid->valuestring));
+            else
+                posts[i].postId[0] = '\0';
+
+            if (created && cJSON_IsString(created))
+                wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
+            else
+                posts[i].createdAt[0] = '\0';
+
+            if (username && cJSON_IsString(username))
+                wcscpy(posts[i].username, charToWchar(username->valuestring));
+            else
+                posts[i].username[0] = '\0';
+
+            if (userid && cJSON_IsString(userid))
+                wcscpy(posts[i].userId, charToWchar(userid->valuestring));
+            else
+                posts[i].userId[0] = '\0';
+
+            if (visibility && cJSON_IsString(visibility))
+                wcscpy(posts[i].visibility, charToWchar(visibility->valuestring));
+            else
+                posts[i].visibility[0] = '\0';
+
+            if (language && cJSON_IsString(language))
+                wcscpy(posts[i].language, charToWchar(language->valuestring));
+            else
+                wcscpy(posts[i].language, L"Unavailable");
+            
+
+            posts[i].createdAt[MAX_STR - 1]  = '\0';
+            posts[i].content[MAX_STR - 1]    = '\0';
+            posts[i].username[MAX_STR - 1]   = '\0';
+            posts[i].userId[MAX_STR - 1]     = '\0';
+            
+            i++;
+        }
+    }
+
+    cJSON_Delete(root);
 }

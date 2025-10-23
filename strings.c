@@ -1,6 +1,6 @@
 #include "headers/tools.h"
 
-char * removeHtml(const char * src) {
+char * removeHtml(char * src) {
     char * dest = malloc(sizeof(char) * MAX_STR);
     char * point_start = dest;
     boolean tag;
@@ -9,16 +9,28 @@ char * removeHtml(const char * src) {
         if (*src == '<') {
             tag = TRUE;
 
-            if (*++src == 'b' && *++src == 'r') {
+            if (!strncmp(src, "<br>", 4)) {
                 *dest++ = '\n';
-            }
-            
+            } else if (!strncmp(src, "<p></p>", 7))
+                return "(Image post)";
+
         } else if (*src == '>') {
             tag = FALSE;
+        } else if (!strncmp(src, "&amp;", 5)) {
+            *dest++ = '&';
+            src+=4;
+        } else if (!strncmp(src, "&#39;", 5)) {
+            *dest++ = '\'';
+            src+=4;
+        } else if (!strncmp(src, "&gt;", 5)) {
+            *dest++ = '>';
+            src+=4;
         } else if (!tag) {
             *dest++ = *src;
         }
         src++;
+
+        
     }
 
     //point *dest back to the start of the string

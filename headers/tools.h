@@ -19,7 +19,7 @@
 
 //library headers
 #ifdef I386
-    #include "/home/ricol03/porrameu/curl-w32/include/curl/curl.h"
+    #include "/home/ricol03/Documentos/Código/ProjectRetrodon/curl/lib/i686/original/include/curl/curl.h"
 #else
     #include "../curl/include/curl/curl.h"
 #endif

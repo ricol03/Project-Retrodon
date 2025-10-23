@@ -18,6 +18,8 @@ struct Post {
     wchar_t username[MAX_STR];
     wchar_t userId[MAX_STR];
     boolean reblog;
+    wchar_t visibility[32];
+    wchar_t language[32];
     int repliesCount;
     int reblogsCount;
     int favouritesCount;
@@ -62,5 +64,7 @@ int getUserToken(wchar_t * server);
 int getUserProfile(wchar_t * server);
 int accessUserTimeline(wchar_t * server);
 int accessLocalTimeline(wchar_t * server);
+
+int postsLoop();
 
 #endif

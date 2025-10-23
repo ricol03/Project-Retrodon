@@ -42,6 +42,7 @@
 #define IDD_DIALOG_CODE                      51
 #define IDD_DIALOG_ACCOUNT                   52
 
+/* buttons */
 
 #define IDB_CONTINUE_I                       4000
 #define IDB_CANCEL_I                         4001
@@ -70,6 +71,7 @@
 #define IDP_BANNER_A                         4301
 #define IDP_AVATAR_A                         4302
 
+#define IDP_AVATAR_P                         4303
 
 //heights & widths
 
