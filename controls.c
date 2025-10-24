@@ -202,7 +202,7 @@ int homeWindow(HWND hwnd) {
     col.pszText = L"Content";
     ListView_InsertColumn(hmainControls[3], 1, &col);
 
-    col.cx = 150;
+    col.cx = 130;
     col.pszText = L"Posted at";
     ListView_InsertColumn(hmainControls[3], 2, &col);
 
@@ -393,7 +393,7 @@ int accountWindow(HWND hwnd) {
         WC_STATIC,
         L"name",
         WS_VISIBLE | WS_CHILD,
-        175, 125, 145, 18,
+        175, 125, 205, 18,
         hwnd,
         (HMENU) IDS_NAME_A,
         GetModuleHandle(NULL),
@@ -404,7 +404,7 @@ int accountWindow(HWND hwnd) {
         WC_STATIC,
         L"name",
         WS_VISIBLE | WS_CHILD,
-        175, 155, 145, 18,
+        175, 155, 175, 18,
         hwnd,
         (HMENU) IDS_NAME_A,
         GetModuleHandle(NULL),
@@ -492,7 +492,7 @@ int codeWindow(HWND hwnd) {
         WC_BUTTON,
         L"Cancel",
         WS_VISIBLE | WS_CHILD,
-        240, 110, 60, 20,
+        240, 110, 60, 30,
         hwnd,
         (HMENU) IDB_CANCEL_C,
         GetModuleHandle(NULL),
@@ -503,7 +503,7 @@ int codeWindow(HWND hwnd) {
         WC_BUTTON,
         L"Continue",
         WS_VISIBLE | WS_CHILD,
-        320, 110, 60, 20,
+        320, 110, 60, 30,
         hwnd,
         (HMENU) IDB_CONTINUE_C,
         GetModuleHandle(NULL),
@@ -514,6 +514,12 @@ int codeWindow(HWND hwnd) {
 int postWindow(HWND hwnd) {
     RECT rc;
     GetClientRect(hwnd, &rc);
+
+    hpostControls[11] = CreateWindowEx(
+            0, L"ChildScrollClass", NULL,
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL,
+            0, 50, 0, 0, // x, y, width, height set in WM_SIZE
+            hwnd, (HMENU)55555, GetModuleHandle(NULL), NULL);
 
     hpostControls[0] = CreateWindow(
         WC_BUTTON,
@@ -530,7 +536,7 @@ int postWindow(HWND hwnd) {
         WC_STATIC,
         L"Post by ",
         WS_VISIBLE | WS_CHILD,
-        rc.left + 80, rc.top + 10, 165, 30,
+        rc.left + 80, rc.top + 10, 195, 30,
         hwnd,
         (HMENU) 54551,
         GetModuleHandle(NULL),
@@ -559,22 +565,11 @@ int postWindow(HWND hwnd) {
         NULL
     );
 
-    hpostControls[4] = CreateWindow(
-        WC_EDIT,
-        L"Note",
-        WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-        10, 80, 580, 250,
-        hwnd,
-        (HMENU) 54554,
-        GetModuleHandle(NULL),
-        NULL
-    );
-
     hpostControls[5] = CreateWindow(
         WC_STATIC,
         L"Comments: ",
         WS_VISIBLE | WS_CHILD,
-        rc.right - 500, rc.bottom - 34, 90, 20,
+        rc.right - 500, rc.bottom - 34, 110, 20,
         hwnd,
         (HMENU) 54555,
         GetModuleHandle(NULL),
@@ -647,11 +642,7 @@ int postWindow(HWND hwnd) {
         NULL
     );*/
 
-    hpostControls[11] = CreateWindowEx(
-            0, L"ChildScrollClass", NULL,
-            WS_CHILD | WS_VISIBLE | WS_VSCROLL,
-            0, 50, 0, 0, // x, y, width, height set in WM_SIZE
-            hwnd, (HMENU)55555, GetModuleHandle(NULL), NULL);
+    
 
     SendMessage(hpostControls[0], WM_SETFONT, (WPARAM)hfont[1], TRUE);
     SendMessage(hpostControls[1], WM_SETFONT, (WPARAM)hfont[1], TRUE);

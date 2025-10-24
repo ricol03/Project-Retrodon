@@ -10,6 +10,7 @@ char * removeHtml(char * src) {
             tag = TRUE;
 
             if (!strncmp(src, "<br>", 4)) {
+                *dest++ = '\r';
                 *dest++ = '\n';
             } else if (!strncmp(src, "<p></p>", 7))
                 return "(Image post)";

@@ -120,77 +120,7 @@ int accessPublicTimeline(wchar_t * server) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
             MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
         } else {
-            cJSON * root = cJSON_Parse(data.response);
-
-            if (root == NULL) {
-                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
-            } else {
-                if (!cJSON_IsArray(root)) {
-                    printf("Error: expected array of posts\n");
-                    return -1;
-                }
-
-                cJSON * item = NULL;
-                size_t i = 0;
-
-                cJSON_ArrayForEach(item, root) {
-                    if (i >= MAX_POSTS)
-                        break;
-
-                    cJSON * postid     = cJSON_GetObjectItemCaseSensitive(item, "id");
-
-                    cJSON * created    = cJSON_GetObjectItemCaseSensitive(item, "created_at");
-                    cJSON * content    = cJSON_GetObjectItemCaseSensitive(item, "content");
-
-                    cJSON * account    = cJSON_GetObjectItemCaseSensitive(item, "account");
-                    cJSON * username   = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
-                    
-                    cJSON * userid     = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
-
-                    cJSON * visibility = cJSON_GetObjectItemCaseSensitive(item, "visibility");
-
-                    if (postid && cJSON_IsString(postid)) {
-                        wcscpy(posts[i].postId, charToWchar(postid->valuestring));
-                    } else {
-                        posts[i].postId[0] = '\0';
-                    }
-                    if (created && cJSON_IsString(created)) {
-                        wcscpy(posts[i].createdAt, charToWchar(removeLetters(created->valuestring)));
-                    } else
-                        posts[i].createdAt[0] = '\0';
-
-                    if (content && cJSON_IsString(content))
-                        wcscpy(posts[i].content, charToWchar(removeHtml(content->valuestring)));
-                    else
-                        posts[i].content[0] = '\0';
-
-                    if (username && cJSON_IsString(username))
-                        wcscpy(posts[i].username, charToWchar(username->valuestring));
-                    else
-                        posts[i].username[0] = '\0';
-
-                    if (userid && cJSON_IsString(userid))
-                        wcscpy(posts[i].userId, charToWchar(userid->valuestring));
-                    else
-                        posts[i].userId[0] = '\0';
-
-                    if (visibility && cJSON_IsString(visibility))
-                        wcscpy(posts[i].visibility, charToWchar(visibility->valuestring));
-                    else
-                        posts[i].visibility[0] = '\0';
-                        
-                    posts[i].postId[32 - 1]     = '\0';
-                    posts[i].createdAt[MAX_STR - 1]  = '\0';
-                    posts[i].content[MAX_STR - 1]    = '\0';
-                    posts[i].username[MAX_STR - 1]   = '\0';
-                    posts[i].userId[MAX_STR - 1]     = '\0';
-                    posts[i].visibility[32 - 1]           = '\0';
-                    
-                    i++;
-                }
-
-                cJSON_Delete(root);
-            }
+            postsLoop();
         }
             
         curl_easy_cleanup(curl);
@@ -270,9 +200,6 @@ int accessPublicPost(wchar_t * server, wchar_t * id) {
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
-
-        //TODO: do a while, while the curl performs failed and the user clicks retry
-        //while
         
         CURLcode result = curl_easy_perform(curl);
 
@@ -325,6 +252,112 @@ int accessPublicPost(wchar_t * server, wchar_t * id) {
 
     return 0;
 }
+
+int accessPublicPostComments(wchar_t * server, wchar_t * id) {
+
+    CURL * curl = curl_easy_init();
+
+    if (curl) {
+        resetMemory(&data);
+
+        wchar_t arguments[128];
+        swprintf(arguments, sizeof(arguments), L"%ls/context", id);
+
+        createEndpoint(server, L"/api/v1/statuses/", arguments);
+        curl_easy_setopt(curl, CURLOPT_URL, wcharToChar(finallink));
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&data);
+        
+        CURLcode result = curl_easy_perform(curl);
+
+        if (result != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
+            MessageBox(NULL, L"Public content could not be retrieved", L"Error", MB_ICONERROR | MB_RETRYCANCEL);
+        } else {
+
+            cJSON * root = cJSON_Parse(data.response);
+
+            printf("\n\nServer response:\n%s\n", data.response);
+
+            if (root == NULL) {
+                MessageBox(NULL, L"JSON is empty", L"Error", MB_ICONERROR);
+            } else {
+
+                cJSON * descendants      = cJSON_GetObjectItemCaseSensitive(root, "descendants");
+                cJSON * item = NULL;
+                int i = 0;
+
+                cJSON_ArrayForEach(item, descendants) {
+                    if (i >= MAX_POSTS)
+                        break;
+
+                    cJSON * content   = cJSON_GetObjectItemCaseSensitive(item, "content");
+                    
+                    if (strcmp(content->valuestring, "") == 0)
+                        break;
+
+                    cJSON * account   = cJSON_GetObjectItemCaseSensitive(item, "account");
+                    cJSON * userid = account ? cJSON_GetObjectItemCaseSensitive(account, "id") : NULL;
+                    cJSON * username   = account ? cJSON_GetObjectItemCaseSensitive(account, "username") : NULL;
+                    cJSON * replies = cJSON_GetObjectItemCaseSensitive(item, "replies_count");
+                    cJSON * reblogs = cJSON_GetObjectItemCaseSensitive(item, "reblogs_count");
+                    cJSON * favourites = cJSON_GetObjectItemCaseSensitive(item, "favourites_count");
+                    cJSON * reactions = cJSON_GetObjectItemCaseSensitive(item, "reactions_count");
+
+                    if (userid) {
+                        wcscpy(posts[postNum].replies[i].userId, charToWchar(userid->valuestring));
+                    } else
+                        posts[postNum].replies[i].userId[0] = '\0';
+
+                    if (content) {
+                        wcscpy(posts[postNum].replies[i].content, charToWchar(removeHtml(content->valuestring)));
+                    } else
+                        posts[postNum].replies[i].content[0] = '\0';
+
+                    if (username) {
+                        wcscpy(posts[postNum].replies[i].username, charToWchar(username->valuestring));
+                    } else
+                        posts[postNum].replies[i].username[0] = '\0';
+
+                    if (replies) {
+                        posts[postNum].replies[i].repliesCount = replies->valueint;
+                    } else
+                        posts[postNum].replies[i].repliesCount = 0;
+
+                    if (reblogs) {
+                        posts[postNum].replies[i].reblogsCount = reblogs->valueint;
+                    } else
+                        posts[postNum].replies[i].reblogsCount = 0;
+
+                    if (favourites) {
+                        posts[postNum].replies[i].favouritesCount = favourites->valueint;
+                    } else
+                        posts[postNum].replies[i].favouritesCount = 0;
+
+                    if (reactions) {
+                        posts[postNum].replies[i].reactionsCount = reactions->valueint;
+                    } else
+                        posts[postNum].replies[i].reactionsCount = 0;
+
+                    i++;
+                }
+            }
+            
+        }
+            
+        curl_easy_cleanup(curl);
+    }
+
+    //resetMemory(&data);
+
+    return 0;
+}
+
+
+
 
 int createApplication(wchar_t * server) {
     CURL * curl = curl_easy_init();
@@ -392,7 +425,7 @@ int createApplication(wchar_t * server) {
                 wcscpy(client_id, charToWchar(id->valuestring));
                 wcscpy(client_secret, charToWchar(secret->valuestring));
 
-                MessageBox(NULL, client_secret, client_id, MB_ICONINFORMATION);
+                //MessageBox(NULL, client_secret, client_id, MB_ICONINFORMATION);
 
                 cJSON_Delete(json);
             }
@@ -547,7 +580,7 @@ int authorizeUser(wchar_t * server) {
     }
         
     if (wcslen(authorizationCode) > 0) {
-        MessageBox(NULL, authorizationCode, L"Info", MB_OK);
+        //MessageBox(NULL, authorizationCode, L"Info", MB_OK);
         return 0;
     } else {
         MessageBox(NULL, L"Code not found", L"Error", MB_OK);
@@ -828,6 +861,7 @@ int postsLoop() {
 
             cJSON * language = cJSON_GetObjectItemCaseSensitive(item, "language");
 
+            cJSON * comments = cJSON_GetObjectItemCaseSensitive(item, "language");
 
             if (reblog && cJSON_IsObject(reblog))
                 posts[i].reblog = TRUE;
@@ -842,7 +876,7 @@ int postsLoop() {
                 if (reblogContent && cJSON_IsString(reblogContent)) {
 
                     wchar_t finalContent[MAX_STR];
-                    swprintf(finalContent, sizeof(finalContent), L"Reblogged from: %s\n%ls", reblogUsername->valuestring, charToWchar(removeHtml(reblogContent->valuestring)));
+                    swprintf(finalContent, sizeof(finalContent), L"Reblogged from: %ls\n\n%ls", charToWchar(reblogUsername->valuestring), charToWchar(removeHtml(reblogContent->valuestring)));
 
                     wcscpy(posts[i].content, finalContent);
                 } else
@@ -887,6 +921,8 @@ int postsLoop() {
             else
                 wcscpy(posts[i].language, L"Unavailable");
             
+            
+
 
             posts[i].createdAt[MAX_STR - 1]  = '\0';
             posts[i].content[MAX_STR - 1]    = '\0';

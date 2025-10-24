@@ -62,6 +62,8 @@ extern wchar_t user_token[128];
 
 int postNum = 0;
 
+int textHeightComments = 0;
+int textHeightPost = 0;
 
 //TODO: could do a separate file for dialog windows 
 
@@ -399,6 +401,9 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
             homeWindow(hwnd);
 
+            ListView_SetExtendedListViewStyle(hmainControls[3],
+            LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
             for (int i = 0; i < MAX_POSTS; i++) {
                 LVITEM item = {0};
                 item.mask = LVIF_TEXT;
@@ -411,6 +416,19 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
             return 0;
         }
+
+        /*case WM_NOTIFY: {
+            LPNMITEMACTIVATE nm = (LPNMITEMACTIVATE)lparam;
+            if (nm->hdr.idFrom == 1001 && nm->hdr.code == NM_CLICK) {
+                int row = nm->iItem;
+                int col = nm->iSubItem;
+
+                wchar_t buf[256];
+                ListView_GetItemText(nm->hdr.hwndFrom, row, col, buf, 256);
+                MessageBox(hwnd, buf, L"Clicked", MB_OK);
+            }
+            break;
+        }*/
 
         case WM_NOTIFY: {
             LPNMHDR pnmh = (LPNMHDR)lparam;
@@ -488,7 +506,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                     g_selectedSubItem = nmItem->iSubItem;
                     InvalidateRect(pnmh->hwndFrom, NULL, TRUE);
                     break;
-                }
+                }*/
 
                 case NM_CUSTOMDRAW: {
                     LPNMLVCUSTOMDRAW cd = (LPNMLVCUSTOMDRAW)lparam;
@@ -505,7 +523,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                         }
                         return CDRF_DODEFAULT;
                     }
-                }*/
+                }
             }
         }
         break;
@@ -704,7 +722,7 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
                 break;
 
                 case IDM_ABOUT_ABOUT: {
-                    MessageBox(hwindow[0], L"Project Retrodon: version 0.1-dev\nAuthor: ricol03", L"About", MB_OK);
+                    MessageBox(hwindow[0], L"Project Retrodon: version 0.1-dev\nAuthor: ricol03\nCopyright© 2025", L"About", MB_OK);
                 }
                 break;
             }
@@ -727,6 +745,9 @@ LRESULT CALLBACK MainWindowProc (HWND hwnd, UINT message, WPARAM wparam, LPARAM 
 
             MoveWindow(hmainControls[3], 0, 65, width, height - 100, TRUE);
             SendMessage(hmainControls[4], WM_SIZE, 0, 0);
+
+
+            return 0;
         }
         
         case WM_PAINT: {
@@ -757,8 +778,8 @@ LRESULT CALLBACK InstanceWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPAR
                 case IDB_CONTINUE_I: {
                     int len = GetWindowText(hinstance_edit, serverAddress, sizeof(serverAddress)/sizeof(WCHAR));
                     if (len == 0) {
-                        MessageBox(hwnd, L"Deve introduzir um endereço válido.",
-                                L"Erro", MB_ICONERROR | MB_OK);
+                        MessageBox(hwnd, L"Enter a valid address.",
+                                L"Error", MB_ICONERROR | MB_OK);
                     } else {
                         saveSettings();
                         DestroyWindow(hwnd);
@@ -926,8 +947,6 @@ LRESULT CALLBACK CodeWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
                     if (text != NULL)
                         wcscpy(authorizationCode, text);
                     
-                    MessageBox(NULL, authorizationCode, L"test", MB_OK);
-                    
                     ShowWindow(hwnd, SW_HIDE);
                     runningCodeDialog = FALSE;
                     return TRUE;
@@ -953,12 +972,11 @@ LRESULT CALLBACK CodeWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
 LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
     switch(message) {
         case WM_CREATE: {
+            accessPublicPost(serverAddress, posts[postNum].postId);
+            accessPublicAccount(serverAddress, posts[postNum].userId);
+            accessPublicPostComments(serverAddress, posts[postNum].postId);
 
             postWindow(hwnd);
-
-            accessPublicPost(serverAddress, posts[postNum].postId);
-
-            accessPublicAccount(serverAddress, posts[postNum].userId);
 
             getImage(account.avatarUrl);
 
@@ -969,12 +987,11 @@ LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
 
             HBITMAP hbmpavatar = CreateHbitmapFromPixels(avatar.pixels, avatar.width, avatar.height, 58, 58);
 
-            if (hbmpavatar) {
+            if (hbmpavatar)
                 SendMessage(hpostControls[3], STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbmpavatar);
-            } else {
+            else
                 MessageBox(NULL, L"Avatar cannot be shown", L"Error", MB_ICONERROR);
-            }
-
+            
             wchar_t poster[64];
             swprintf(poster, sizeof(poster), L"Post by: %ls", posts[postNum].username);
 
@@ -1005,8 +1022,38 @@ LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
             SendMessage(hpostControls[9] , WM_SETTEXT, 0, (LPARAM)visibility);
             SendMessage(hpostControls[10], WM_SETTEXT, 0, (LPARAM)language);
 
-            MessageBox(NULL, posts[postNum].content, L"Info", MB_OK);
-            printf("%ls", posts[postNum].content);
+            // gets the text size + number of lines
+            int lineCount = SendMessage(hpostControls[4], EM_GETLINECOUNT, 0, 0);
+            int lineHeight = 0;
+
+            HDC hdc = GetDC(hpostControls[4]);
+            HFONT hFont = (HFONT)SendMessage(hpostControls[4], WM_GETFONT, 0, 0);
+            SelectObject(hdc, hFont);
+
+            TEXTMETRIC tm;
+            GetTextMetrics(hdc, &tm);
+            lineHeight = tm.tmHeight;
+            ReleaseDC(hpostControls[4], hdc);
+            
+            textHeightPost = lineCount * lineHeight;
+
+            int lineCountComments = SendMessage(hpostControls[12], EM_GETLINECOUNT, 0, 0);
+            int lineHeightComments = 0;
+
+            HDC hdcComments = GetDC(hpostControls[12]);
+            HFONT hfontComments = (HFONT)SendMessage(hpostControls[12], WM_GETFONT, 0, 0);
+            SelectObject(hdcComments, hfontComments);
+
+            TEXTMETRIC tmComments;
+            GetTextMetrics(hdcComments, &tmComments);
+            lineHeightComments = tm.tmHeight;
+            ReleaseDC(hpostControls[12], hdcComments);
+            
+            textHeightComments = lineCountComments * lineHeightComments;
+
+            // places the comments section 10 pixels below the end of the text, and
+            // makes the size of the child window sufficient to hold the text
+            MoveWindow(hpostControls[12], 10, textHeightPost + 10, 560, textHeightComments, TRUE);
 
             return 0;
         }
@@ -1049,6 +1096,12 @@ LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
             return 0;
         }   
 
+        case WM_SIZE: {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            MoveWindow(hpostControls[11], 0, 80, rc.right, rc.bottom - 130, TRUE);
+        }
+
         case WM_PAINT: {
             HDC hdc = BeginPaint(hwnd, &ps);
             FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_3DFACE+1));
@@ -1062,6 +1115,114 @@ LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM l
     }
 
     return DefWindowProc(hwnd, message, wparam, lparam);
+}
+
+LRESULT CALLBACK ChildPostWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+    static int scrollPos = 0;
+
+    switch (msg) {
+
+        case WM_CREATE: {
+            hpostControls[4] = CreateWindow(
+                WC_EDIT,
+                L"Note",
+                WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_READONLY,
+                10, 0, 560, 240,
+                hwnd,
+                (HMENU) 54554,
+                GetModuleHandle(NULL),
+                NULL
+            );
+
+            hpostControls[12] = CreateWindow(
+                WC_EDIT,
+                L"Comments",
+                WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_READONLY,
+                10, 510, 580, 240,
+                hwnd,
+                (HMENU) 54565,
+                GetModuleHandle(NULL),
+                NULL
+            );
+
+            boolean haveComments = TRUE;
+            int i = 0;
+            wchar_t buffer[MAX_STR];
+            wchar_t comments[MAX_STR];
+            comments[0] = L'\0';
+            buffer[0] = L'\0';
+            while (haveComments) {
+                if (wcscmp(posts[postNum].replies[i].content, L"") == 0)
+                    haveComments = FALSE;
+                else {
+                    wcscpy(buffer, L"");
+                    swprintf(buffer, MAX_STR, L"Comment from %ls\r\n%ls\r\n\r\n", posts[postNum].replies[i].username, posts[postNum].replies[i].content);
+                    wcscat(comments, buffer);
+
+                    i++;
+                }
+            }
+
+            if (wcscmp(comments, L"") == 0)
+                wcscpy(comments, L"No comments for this post");
+            
+            SendMessage(hpostControls[12] , WM_SETTEXT, 0, (LPARAM)comments);
+
+        }
+
+        case WM_VSCROLL: {
+            SCROLLINFO si = { sizeof(SCROLLINFO), SIF_ALL };
+            GetScrollInfo(hwnd, SB_VERT, &si);
+            int oldPos = si.nPos;
+
+            switch (LOWORD(wparam)) {
+                case SB_LINEUP:   si.nPos -= 20; break;
+                case SB_LINEDOWN: si.nPos += 20; break;
+                case SB_THUMBTRACK: si.nPos = si.nTrackPos; break;
+            }
+
+            si.fMask = SIF_POS;
+            SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+            GetScrollInfo(hwnd, SB_VERT, &si);
+
+            int delta = si.nPos - oldPos;
+            if (delta != 0) {
+                scrollPos = si.nPos;
+
+                EnumChildWindows(hwnd, MoveChildProc, delta);
+
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+            return 0;
+        }
+
+        case WM_SIZE: {
+            SCROLLINFO si = { sizeof(SCROLLINFO), SIF_RANGE | SIF_PAGE };
+            si.nMin = 0;
+            si.nMax = textHeightPost + textHeightComments;
+            si.nPage = HIWORD(lparam);
+            SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+            return 0;
+        }
+    }
+
+    return DefWindowProc(hwnd, msg, wparam, lparam);
+}
+
+BOOL CALLBACK MoveChildProc(HWND hChild, LPARAM lParam) {
+    int delta = (int)lParam;
+    RECT rc;
+    GetWindowRect(hChild, &rc);
+    HWND hParent = GetParent(hChild);
+    ScreenToClient(hParent, (POINT*)&rc.left);
+    ScreenToClient(hParent, (POINT*)&rc.right);
+    SetWindowPos(hChild, NULL,
+        rc.left,
+        rc.top - delta,
+        rc.right - rc.left,
+        rc.bottom - rc.top,
+        SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS);
+    return TRUE;
 }
 
 int checkVersion() {
@@ -1082,52 +1243,4 @@ int checkVersion() {
 }
 
 
-
-LRESULT CALLBACK ChildPostWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-    static int scrollPos = 0;
-
-    switch (msg) {
-        case WM_PAINT: {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hwnd, &ps);
-
-            for (int i = 0; i < 50; i++) {
-                TextOut(hdc, 10, i * 20 - scrollPos, L"Line of text", 13);
-            }
-
-            EndPaint(hwnd, &ps);
-            return 0;
-        }
-
-        case WM_VSCROLL: {
-            SCROLLINFO si = { sizeof(SCROLLINFO), SIF_ALL };
-            GetScrollInfo(hwnd, SB_VERT, &si);
-            int pos = si.nPos;
-
-            switch (LOWORD(wparam)) {
-            case SB_LINEUP:   si.nPos -= 20; break;
-            case SB_LINEDOWN: si.nPos += 20; break;
-            case SB_THUMBTRACK: si.nPos = si.nTrackPos; break;
-            }
-
-            SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
-            GetScrollInfo(hwnd, SB_VERT, &si);
-            scrollPos = si.nPos;
-            InvalidateRect(hwnd, NULL, TRUE);
-            return 0;
-        }
-
-        case WM_SIZE: {
-            SCROLLINFO si = { sizeof(SCROLLINFO), SIF_RANGE | SIF_PAGE };
-            si.nMin = 0;
-            si.nMax = 1000;  // total content height
-            si.nPage = HIWORD(lparam);
-            SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
-            return 0;
-        }
-
-    }
-
-    return DefWindowProc(hwnd, msg, wparam, lparam);
-}
 

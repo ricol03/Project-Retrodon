@@ -166,11 +166,7 @@ int readSettings() {
                 return 1;
             }
         }
-    } else
-        MessageBox(NULL, L"Settings not found", L"Error", MB_ICONERROR);
-    
-
-    MessageBox(NULL, L"Settinfdsfsdfsfgs not found", L"Error", MB_ICONERROR);
+    }
 
     //fclose(fr);
     return 0;
@@ -208,11 +204,9 @@ int readSecrets() {
     swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
     fr = _wfopen(filepath, L"r+b");
 
-    if (fr == NULL) {
-        MessageBox(NULL, L"Settings file not found", L"Error", MB_ICONERROR);
+    if (fr == NULL)
         return 0;
-    }
-
+    
     wchar_t buffer[MAX_STR];
     wchar_t * line;
     int lineCount = 0;
@@ -224,7 +218,7 @@ int readSecrets() {
 
         if (lineCount == 1) {
             wcscpy(client_id, buffer);
-            MessageBox(NULL, client_id, L"Info", MB_OK);
+            //MessageBox(NULL, client_id, L"Info", MB_OK);
         } else if (lineCount == 2)
             wcscpy(client_secret, buffer);
         
@@ -259,11 +253,9 @@ int readToken() {
     swprintf(filepath, sizeof(filepath), L"%ls/%ls", appdata, SETTINGSFILENAME);
     fr = _wfopen(filepath, L"r+b");
 
-    if (fr == NULL) {
-        MessageBox(NULL, L"Settings file not found", L"Error", MB_ICONERROR);
+    if (fr == NULL)
         return 0;
-    }
-
+    
     wchar_t buffer[MAX_STR];
     wchar_t * line;
     int lineCount = 0;

@@ -22,6 +22,8 @@ LRESULT CALLBACK AccountWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARA
 LRESULT CALLBACK PostWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 LRESULT CALLBACK ChildPostWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
+BOOL CALLBACK MoveChildProc(HWND hChild, LPARAM lParam);
+
 int preparingApplication();
 int checkVersion();
 
